@@ -273,6 +273,47 @@ static int xor(lua_State *L) {
 }
 
 
+static int getbucketno(lua_State* L) {
+  
+  int nargs = lua_gettop(L);
+  if (nargs != 1) {
+    lua_pushstring(L, "getbucketno() needs exactly one argument");
+    lua_error(L);
+  }
+  
+  if (!(lua_isstring(L, 1))) {
+    lua_pushstring(L, "argument needs to be a string");
+    lua_error(L);
+  }
+
+  size_t len;
+  const unsigned char *buf = (const unsigned char*) lua_tolstring(L, 1, &len);
+
+  for (int i = 0; i < len; i++) {
+    unsigned char bit = 1;
+    // we have found the byte with the first bit set (in the string as a whole)
+    unsigned char byte = buf[i];
+    if (byte) {
+      while (!(byte & 0x80)) {
+	byte = byte << 1;
+	bit++;
+      }
+      lua_pushnumber(L, (double) (i * 8) + (double) bit);
+      return 1;
+    }
+  }
+
+  //lua_pushnumber(L, 0.0);
+  //return 1;
+
+  // the error will be in your face
+  lua_pushstring(L, "no bit set to one found");
+  lua_error(L);
+  return 0;
+
+}
+
+
 
 
 static const struct luaL_reg eclib[] = {
@@ -281,6 +322,7 @@ static const struct luaL_reg eclib[] = {
   {"tohex", tohex},
   {"fromhex", fromhex},
   {"xor", xor},
+  {"getbucketno", getbucketno},
   {NULL, NULL}
 };
 
