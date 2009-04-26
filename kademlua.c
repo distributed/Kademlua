@@ -20,6 +20,8 @@
 
 
 #define DEFAULT_PORT 8000
+#define HASH_SECT u_int32_t
+
 
 lua_State *mstate;
 int sock;
@@ -213,6 +215,64 @@ static int fromhex(lua_State *L) {
 }
 
 
+static int xor(lua_State *L) {
+
+  int nargs = lua_gettop(L);
+  if (nargs != 2) {
+    lua_pushstring(L, "xor() needs exactly two arguments");
+    lua_error(L);
+  }
+  
+  if (!(lua_isstring(L, 1))) {
+    lua_pushstring(L, "argument 1 needs to be a string");
+    lua_error(L);
+  }
+
+  if (!(lua_isstring(L, 2))) {
+    lua_pushstring(L, "argument 2 needs to be a string");
+    lua_error(L);
+  }
+
+  size_t len1;
+  const unsigned char *inbuf1 = (const unsigned char*) lua_tolstring(L, 1, &len1);
+
+  size_t len2;
+  const unsigned char *inbuf2 = (const unsigned char*) lua_tolstring(L, 2, &len2);
+
+
+  if (len1 != len2) {
+    lua_pushstring(L, "the strings need to be of the same length");
+    lua_error(L);
+  }
+
+  if ((len1 % sizeof(HASH_SECT)) != 0) {
+    lua_pushstring(L, "the strings need to be divideable by sizeof(HASH_SECT)");
+    lua_error(L);
+  }
+
+  HASH_SECT *sect1 = (HASH_SECT*) inbuf1;
+  HASH_SECT *sect2 = (HASH_SECT*) inbuf2;
+
+  unsigned char* outbuf = malloc(len1);
+  if (outbuf == NULL) {
+    lua_pushstring(L, "could not allocate memory");
+    lua_error(L);
+  }
+
+  HASH_SECT *outsect = (HASH_SECT*) outbuf;
+
+  for (int i = 0; i < (len1 / sizeof(HASH_SECT)); i++) {
+    outsect[i] = sect1[i] ^ sect2[i]; 
+    printf("%x ^ %x == %x\n", sect1[i], sect2[i], sect1[i] ^ sect2[i]);
+  }
+
+
+  lua_pushlstring(L, (char*) outbuf, len1);
+  return 1;
+
+}
+
+
 
 
 static const struct luaL_reg eclib[] = {
@@ -220,6 +280,7 @@ static const struct luaL_reg eclib[] = {
   {"sha1", sha1},
   {"tohex", tohex},
   {"fromhex", fromhex},
+  {"xor", xor},
   {NULL, NULL}
 };
 
