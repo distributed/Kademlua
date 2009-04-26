@@ -28,7 +28,110 @@ int sock;
 int port;
 struct sockaddr_in mysockaddr;
 
+void notdecoded(lua_State *L) {
 
+    lua_pushstring(L, "decoded");
+    lua_pushboolean(L, 0);
+    lua_settable(L, -3);
+
+}
+
+static int recvpacket(lua_State *L) {
+
+  char sbuf[16384];
+  printf("socket ready to read\n");
+
+  struct sockaddr_in from;
+
+  socklen_t len = sizeof(from);
+  int res = recvfrom(sock, sbuf, 16384, 0,
+		     (struct sockaddr *) &from, &len);
+  if (res == -1) {
+    perror("kademlua: read");
+    return 0;
+  }
+
+  int packlen = res;
+
+
+  char ascaddr[32] = {0};
+  inet_ntop(AF_INET, &(from.sin_addr), ascaddr, sizeof(ascaddr));
+
+
+  lua_newtable(L);
+  lua_pushstring(L, "type");
+  lua_pushstring(L, "sock");
+  lua_settable(L, -3);
+  
+  lua_pushstring(L, "raw");
+  lua_pushlstring(L, sbuf, res);
+  lua_settable(L, -3);
+  
+  
+
+  int pos = 0;
+  if (packlen < 1) {
+    notdecoded(L);
+    return 1;
+  } else {
+    if (sbuf[0] != 1) {
+      // wrong header type
+      notdecoded(L);
+      return 1;
+    }
+    // we need 21 more bytes
+    pos++;
+    if (packlen < (pos + 21)) {
+      notdecoded(L);
+      return 1;
+    }
+
+    char *idptr = &sbuf[pos];
+
+    pos = pos + 20;
+    unsigned char call = sbuf[pos];
+
+    lua_pushstring(L, "message");
+    lua_newtable(L);
+
+    lua_pushstring(L, "id");
+    lua_pushlstring(L, idptr, 20);
+    lua_settable(L, -3);
+
+
+    lua_pushstring(L, "from");
+    lua_newtable(L);
+
+
+    lua_pushstring(L, "addr");
+    lua_pushstring(L, ascaddr);
+    lua_settable(L, -3);
+
+    lua_pushstring(L, "port");
+    lua_pushnumber(L, ntohs(from.sin_port));
+    lua_settable(L, -3);
+
+    lua_settable(L, -3);
+
+
+    lua_pushstring(L, "call");
+    lua_pushnumber(L, call);
+    lua_settable(L, -3);
+
+
+    lua_settable(L, -3);
+
+
+
+    lua_pushstring(L, "decoded");
+    lua_pushboolean(L, 1);
+    lua_settable(L, -3);
+
+  }
+
+  return 1;
+
+}
 
 
 static int getevent(lua_State *L) {
@@ -52,7 +155,7 @@ static int getevent(lua_State *L) {
     //lua_pushstring(mstate, buf);
 
     lua_newtable(L);
-    lua_pushstring(L, "from");
+    lua_pushstring(L, "type");
     lua_pushstring(L, "stdin");
     lua_settable(L, -3);
 
@@ -64,25 +167,8 @@ static int getevent(lua_State *L) {
   }
 
   if (FD_ISSET(sock, &rset)) {
-    char sbuf[16384];
-    printf("socket ready to read\n");
-    int res = read(sock, sbuf, 16384);
-    if (res == -1) {
-      perror("kademlua: read");
-      return 0;
-    }
 
-    lua_newtable(L);
-    lua_pushstring(L, "from");
-    lua_pushstring(L, "sock");
-    lua_settable(L, -3);
-
-    lua_pushstring(L, "raw");
-    lua_pushlstring(L, sbuf, res);
-    lua_settable(L, -3);
-
-
-    return 1;
+    return recvpacket(L);
   }
 
 
@@ -359,6 +445,11 @@ int main(int argc, char **argv) {
   {
     int res;
     mysockaddr.sin_addr.s_addr = INADDR_ANY;
+    
+    // TODO: move somewhere else
+    //mysockaddr.sin_addr.s_addr = inet_addr("192.168.1.5");
+    
+
     mysockaddr.sin_port = htons(port);
     if ((res = bind(sock, (struct sockaddr*) &mysockaddr, sizeof(mysockaddr))) == -1) {
       perror("kademlua: bind");
@@ -370,8 +461,8 @@ int main(int argc, char **argv) {
     if (res == -1) {
       perror("kademlua: getsockname");
     }
-    char ascaddr[24];
-    inet_ntop(AF_INET, &(mysockaddr.sin_addr), ascaddr, 24);
+    char ascaddr[32];
+    inet_ntop(AF_INET, &(mysockaddr.sin_addr), ascaddr, 32);
     printf("bound to %s:%i\n", ascaddr, ntohs(mysockaddr.sin_port));
   }
 

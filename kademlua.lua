@@ -22,12 +22,16 @@ res = ec.getevent()
 print("the res table:")
 table.foreach(res, print)
 print("")
-print("res.from: " .. res.from)
+print("res.type: " .. res.type)
 
-if res.from == "stdin" then
+if res.type == "stdin" then
    print("from stdin")
-elseif res.from == "sock" then
+elseif res.type == "sock" then
    print("from socket")
+   table.foreach(res, print)
+   if res.decoded then
+      table.foreach(res.message, print)
+   end
 else
    print("unknown from")
 end
