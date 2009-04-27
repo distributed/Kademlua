@@ -1,3 +1,10 @@
+require("scheduler")
+
+
+s1 = Scheduler:new()
+
+print("s1:", s1.readyq)
+
 
 print("hash of 'kademlua':", ec.tohex(ec.sha1("kademlua")))
 print("with fromhex:", ec.tohex(ec.fromhex(ec.tohex(ec.sha1("kademlua")))))
@@ -16,6 +23,28 @@ print("this would be put in bucket " .. tostring(ec.getbucketno(xorres)))
 -- seems to be correct too
 
 
+function f2()
+   return "retval f2"
+end
+
+function printn(n)
+   for i=1,n do
+      print(i)
+      syield()
+   end
+end
+
+function f1()
+   srun(printn, 5)
+   syield()
+   ret = scall(f2)
+   return "retval f1", ret
+end
+s1:runf(f1, "arg1", "and arg 2")
+
+-- wait for all coroutines to finish
+while(s1:runone() > 0) do print(); print() end
+
 
 res = ec.getevent()
 
@@ -31,6 +60,8 @@ elseif res.type == "sock" then
    table.foreach(res, print)
    if res.decoded then
       table.foreach(res.message, print)
+      print("from:")
+      table.foreach(res.message.from, print)
    end
 else
    print("unknown from")
