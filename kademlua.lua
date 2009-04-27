@@ -29,13 +29,15 @@ end
 
 function printn(n)
    for i=1,n do
-      print(i)
+      print("i is now: " .. tostring(i))
       syield()
+      ssleep(1.8)
    end
 end
 
 function f1()
    srun(printn, 5)
+   ssleep(2.0)
    syield()
    ret = scall(f2)
    return "retval f1", ret
@@ -43,8 +45,8 @@ end
 s1:runf(f1, "arg1", "and arg 2")
 
 -- wait for all coroutines to finish
-while(s1:runone() > 0) do print(); print() end
-
+--while(s1:runone() > 0) do print(); print() end
+s1:run()
 
 res = ec.getevent()
 

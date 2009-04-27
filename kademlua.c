@@ -158,6 +158,24 @@ static int recvpacket(lua_State *L) {
 
 static int getevent(lua_State *L) {
 
+  double dtimeout;
+  if (lua_gettop(L) == 1) {
+    dtimeout = lua_tonumber(L, 1);
+  } else {
+    dtimeout = 0;
+  }
+
+
+  struct timeval timeout;
+  struct timeval *timeout_ptr;
+  if (dtimeout == 0.0) {
+    timeout_ptr = NULL;
+  } else {
+    timeout.tv_sec = (int) dtimeout;
+    timeout.tv_usec = (int) ((dtimeout - (double) ((int) dtimeout)) * 1e6);
+    timeout_ptr = &timeout;
+  }
+
   
   fd_set rset;
   FD_ZERO(&rset);
@@ -167,7 +185,7 @@ static int getevent(lua_State *L) {
 
   // determining max fd = argh! i hate apple for not being able to produce
   // a poll() which works on a terminal.
-  select(sock + 1, &rset, NULL, NULL, 0);
+  select(sock + 1, &rset, NULL, NULL, timeout_ptr);
 
   if (FD_ISSET(0, &rset)) {
     char buf[1024];
