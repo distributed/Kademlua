@@ -18,6 +18,8 @@
 
 #include <openssl/sha.h>
 
+#include <sys/time.h>
+
 
 #define DEFAULT_PORT 8000
 #define HASH_SECT u_int32_t
@@ -110,6 +112,26 @@ static int recvpacket(lua_State *L) {
     lua_pushstring(L, "port");
     lua_pushnumber(L, ntohs(from.sin_port));
     lua_settable(L, -3);
+
+    lua_pushstring(L, "id");
+    lua_pushlstring(L, idptr, 20);
+    lua_settable(L, -3);
+
+    char unique[64];
+    snprintf(unique, 64, "%s:%i:", ascaddr, ntohs(from.sin_port));
+    {
+      lua_pushstring(L, "unique");
+      int where = strlen(unique);
+      if (where <= 44) {
+	memcpy(&unique[where], idptr, 20);
+	lua_pushlstring(L, unique, where + 20);
+      } else {
+	lua_pushstring(L, "xxx");
+      }
+      lua_settable(L, -3);
+    }
+
+
 
     lua_settable(L, -3);
 
@@ -400,6 +422,19 @@ static int getbucketno(lua_State* L) {
 }
 
 
+static int ectime(lua_State *L) {
+  
+  struct timeval t;
+
+  gettimeofday(&t, NULL);
+
+  double tm = t.tv_sec + (1e-6 * t.tv_usec);
+
+  lua_pushnumber(L, tm);
+  return 1;
+
+}
+
 
 
 static const struct luaL_reg eclib[] = {
@@ -409,6 +444,7 @@ static const struct luaL_reg eclib[] = {
   {"fromhex", fromhex},
   {"xor", xor},
   {"getbucketno", getbucketno},
+  {"time", ectime},
   {NULL, NULL}
 };
 
