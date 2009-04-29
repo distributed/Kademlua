@@ -1,3 +1,4 @@
+require("protocol")
 require("scheduler")
 
 
@@ -36,10 +37,10 @@ function printn(n)
 end
 
 function f1()
-   srun(printn, 5)
+   srun(printn, 3)
    ssleep(2.0)
    syield()
-   ret = scall(f2)
+   errorfree, ret = scall(f2)
    return "retval f1", ret
 end
 s1:runf(f1, "arg1", "and arg 2")

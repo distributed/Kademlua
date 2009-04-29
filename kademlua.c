@@ -19,6 +19,7 @@
 #include <openssl/sha.h>
 
 #include <sys/time.h>
+#include <sys/errno.h>
 
 
 #define DEFAULT_PORT 8000
@@ -41,7 +42,7 @@ void notdecoded(lua_State *L) {
 static int recvpacket(lua_State *L) {
 
   char sbuf[16384];
-  printf("socket ready to read\n");
+  //printf("socket ready to read\n");
 
   struct sockaddr_in from;
 
@@ -53,7 +54,7 @@ static int recvpacket(lua_State *L) {
     return 0;
   }
 
-  int packlen = res;
+  //int packlen = res;
 
 
   char ascaddr[32] = {0};
@@ -68,10 +69,22 @@ static int recvpacket(lua_State *L) {
   lua_pushstring(L, "raw");
   lua_pushlstring(L, sbuf, res);
   lua_settable(L, -3);
+
+  lua_pushstring(L, "from");
+  lua_newtable(L);
+  lua_pushstring(L, "addr");
+  lua_pushstring(L, ascaddr);
+  lua_settable(L, -3);
+  
+  lua_pushstring(L, "port");
+  lua_pushnumber(L, ntohs(from.sin_port));
+  lua_settable(L, -3);
+  lua_settable(L, -3);
+  //printf("addr stored\n");
   
   
 
-  int pos = 0;
+  /*int pos = 0;
   if (packlen < 1) {
     notdecoded(L);
     return 1;
@@ -149,7 +162,7 @@ static int recvpacket(lua_State *L) {
     lua_pushboolean(L, 1);
     lua_settable(L, -3);
 
-  }
+    }*/
 
   return 1;
 
@@ -158,8 +171,10 @@ static int recvpacket(lua_State *L) {
 
 static int getevent(lua_State *L) {
 
+  int nargs = lua_gettop(L);
+
   double dtimeout;
-  if (lua_gettop(L) == 1) {
+  if (nargs >= 1) {
     dtimeout = lua_tonumber(L, 1);
   } else {
     dtimeout = 0;
@@ -177,6 +192,89 @@ static int getevent(lua_State *L) {
   }
 
   
+  if (nargs >= 2) {
+    
+    int packslen = lua_objlen(L, 2);
+
+    for (int i = 1; i <= packslen; i++) {
+      lua_pushnumber(L, i);
+      lua_gettable(L, 2);
+      // -> packet table on top of stack
+      //printf("got packet table\n");
+      
+      lua_pushstring(L, "to");
+      lua_gettable(L, -2);
+      // -> to field on top of stack
+      //printf("got to field\n");
+
+      lua_pushstring(L, "addr");
+      lua_gettable(L, -2);
+      // -> ip addr on top of stack
+      //printf("ip addr string on top of stack\n");
+
+      const char *ascaddr = lua_tostring(L, -1);
+      if (ascaddr == NULL) {
+	lua_pushstring(L, "need a string to represent and IP address");
+	lua_error(L);
+      }
+
+      struct sockaddr_in addr;
+      addr.sin_family = AF_INET;
+      if (inet_pton(AF_INET, ascaddr, &(addr.sin_addr)) == -1) {
+	lua_pushstring(L, "invalid IP address");
+	lua_error(L);
+      }
+
+      //printf("got addr\n");
+
+      lua_pop(L, 1);
+      // -> to field on top of stack
+      
+      lua_pushstring(L, "port");
+      lua_gettable(L, -2);
+      // -> port on top of stack
+      addr.sin_port = htons(lua_tonumber(L, -1));
+      lua_pop(L, 1);
+      // -> to field on top of stack
+
+      lua_pop(L, 1);
+      // -> packet table on top of stack
+
+      lua_pushstring(L, "raw");
+      lua_gettable(L, -2);
+      int sendres;
+      if (!(lua_isnil(L, -1))) {
+	size_t len;
+	const char *raw = lua_tolstring(L, -1, &len);
+	sendres = sendto(sock, raw, len, 0, 
+			 (struct sockaddr*) &addr, sizeof(addr));
+      } else {
+	sendres = sendto(sock, "yeehaw!", 7, 0, 
+			 (struct sockaddr*) &addr, sizeof(addr));
+      }
+      lua_pop(L, 1);
+
+      if (sendres == -1) {
+	char *errmsg = strerror(errno);
+	lua_pushstring(L, "errmsg");
+	lua_pushstring(L, errmsg);
+	lua_settable(L, -3);
+
+	lua_pushstring(L, "errno");
+	lua_pushnumber(L, errno);
+	lua_settable(L, -3);
+      }
+      lua_pushstring(L, "res");
+      lua_pushnumber(L, sendres);
+      lua_settable(L, -3);
+
+      lua_pop(L, 1);
+      // -> last arg on top of stack
+    }
+
+  }
+
+
   fd_set rset;
   FD_ZERO(&rset);
   FD_SET(0,    &rset);
@@ -498,6 +596,7 @@ int main(int argc, char **argv) {
 
   {
     int res;
+    mysockaddr.sin_family = AF_INET;
     mysockaddr.sin_addr.s_addr = INADDR_ANY;
     
     // TODO: move somewhere else
