@@ -63,8 +63,10 @@ function Scheduler:new(o)
 	     sleeping = {},
 	     packetq = {},
 	     nextpid = 1,
+	     numrunning = 0,
 	     procs = {}
 	  }
+   o.callmanager= CallManager:new(o, "das esch de rap shit")
    setmetatable(o,self)
    self.__index = self
    return o
@@ -83,6 +85,8 @@ function Scheduler:runf(func, ...)
 
    table.insert(self.readyq, {proc=proc, args=arg})
 
+   self.numrunning = self.numrunning + 1
+
 end
 
 
@@ -98,6 +102,8 @@ function Scheduler:callf(func, linkproc, ...)
    --print("started pid " .. tostring(pid) .. " linked to " ..linkproc.pid)
 
    table.insert(self.readyq, {proc=proc, args=arg})
+
+   self.numrunning = self.numrunning + 1
 
 end
 
@@ -138,9 +144,10 @@ function Scheduler:handlecall(callres)
    elseif callres[2] == "p" then
 
       local packet = callres[3]
-      table.insert(self.packetq, packet)
-      table.insert(self.readyq, {proc=self.running, args={}})
-      
+      --table.insert(self.packetq, packet)
+      --table.insert(self.readyq, {proc=self.running, args={}})
+      self.callmanager:outgoing(self.running, packet)
+
    else
       print("unknown call from pid " .. self.running.pid)
    end
@@ -167,11 +174,16 @@ function Scheduler:runone()
    --print("proc:")
    --table.foreach(proc, print)
 
+   if callres[1] == false then
+      print("ERROR: " .. callres[2])
+   end
 
    local state = coroutine.status(coro)
    if state ~= "dead" then
       self:handlecall(callres)
    else
+      self.numrunning = self.numrunning - 1
+      --print("numrunning: " .. self.numrunning)
       if proc.linkproc ~= nil then
 	 --print("adding linked proc to the ready queue")
 	 --table.remove(callres, 1)
@@ -218,7 +230,8 @@ end
 
 
 function Scheduler:run()
-   while (#(self.readyq) > 0 or #(self.sleeping) > 0) do
+   --while (#(self.readyq) > 0 or #(self.sleeping) > 0) do
+   while self.numrunning > 0 do
 
       self:wakeupsleepers()
       while (#(self.readyq) > 0) do
@@ -231,12 +244,13 @@ function Scheduler:run()
       local timeout
       if first ~= nil then
 	 timeout = first.wakeup - ec.time()
+	 if timeout < 0 then timeout = 0 end
       else
 	 timeout = 0
       end
 
       --table.foreach(first, print)
-      if timeout ~= 0 then
+      --if timeout ~= 0 then
 	 -- there's still something to be done
 	 --print("getevent with a timeout of " .. tostring(timeout))
 	
@@ -247,17 +261,20 @@ function Scheduler:run()
 	 --packets = {{to={addr="192.168.1.5", port=4501}},
 	 --	    {to={addr="78.46.82.237", port=6002}, raw=rawpack}}
 	 --	    --{to={addr="78.46.82.237", port=32769}, raw="rap shit"}}
+      --print("ec.getevent, timeout " .. timeout .. " & handlepacketproc " .. tostring(self.handlepacketproc))
 	 retval = ec.getevent(timeout, self.packetq)
 	 self.packetq = {}
 	 if retval ~= nil and retval.type == "sock" then
 	    decodepacket(retval)
 
+	    self.callmanager:incoming({retval})
 	    -- srun doesn't work because we can't yield to ourself
 	    -- srun(runcall, retval)
-	    self:runf(runcall, retval)
+	    --self:runf(runcall, retval)
 	 end
-      else
-	 break
-      end
+      --else
+	 --break
+      --end
    end
+   print("end numrunning " .. self.numrunning)
 end

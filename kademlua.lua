@@ -1,5 +1,8 @@
 require("protocol")
 require("scheduler")
+require("call")
+
+math.randomseed(ec.time())
 
 
 s1 = Scheduler:new()
@@ -36,11 +39,46 @@ function printn(n)
    end
 end
 
-function f1()
+function ping(who)
+   local rpcid = string.sub(ec.sha1(tostring(math.random())), 1, 8)
+   local packet = {to=who,
+		   rpcid=rpcid,
+		   fromid="pingndidpingndidxxXX",
+		   call=129}
+   local raw = encodepacket(packet)
+   packet.raw = raw
+   --print("yielding packet")
+   coroutine.yield("p", packet)
+		   
+end
+
+function packethandler()
+   while 1 do
+      local packet = coroutine.yield("gp")
+      
+      local rpacket = {to=packet.from, 
+		rpcid=packet.rpcid, 
+		fromid="liveshitliveshitxxXX",
+		call = 128}
+      local rraw = encodepacket(rpacket)
+      print("raw len: " .. #rraw)
+      coroutine.yield("p", {to=packet.from, raw=rraw})
+
+      --print("PACKET HANDLE CALL", packet)
+      --table.foreach(packet.from, print)
+      --table.foreach(packet, print)
+   end
+end
+
+
+function f1()   
+   srun(packethandler)
+   srun(ping, {addr="192.168.1.5", port=9000})
+
    srun(printn, 3)
    ssleep(2.0)
    syield()
-   errorfree, ret = scall(f2)
+   local errorfree, ret = scall(f2)
    return "retval f1", ret
 end
 s1:runf(f1, "arg1", "and arg 2")
