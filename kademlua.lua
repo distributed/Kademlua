@@ -1,13 +1,14 @@
 require("protocol")
 require("scheduler")
 require("call")
+require("node")
 
 math.randomseed(ec.time())
 
 
-s1 = Scheduler:new()
 
-print("s1:", s1.readyq)
+
+--print("s1:", s1.readyq)
 
 
 print("hash of 'kademlua':", ec.tohex(ec.sha1("kademlua")))
@@ -44,7 +45,7 @@ function ping(who)
    local packet = {to=who,
 		   rpcid=rpcid,
 		   fromid="pingndidpingndidxxXX",
-		   call=129}
+		   call=1}
    local raw = encodepacket(packet)
    packet.raw = raw
    --print("yielding packet")
@@ -115,6 +116,11 @@ function f1()
    srun(client, "c2")
    srun(client, "c3")
 
+
+   for i, to in ipairs(bootstrap) do
+      srun(node.ping, node, to)
+   end
+
    srun(printn, 3)
    ssleep(2.0)
    syield()
@@ -122,6 +128,9 @@ function f1()
    srun(client, "c4")
    return "retval f1", ret
 end
+
+node = KademluaNode:new(id)
+s1 = Scheduler:new(node)
 s1:runf(f1, "arg1", "and arg 2")
 
 -- wait for all coroutines to finish

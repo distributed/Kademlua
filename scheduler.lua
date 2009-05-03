@@ -165,6 +165,7 @@ Scheduler = {
 }
 
 
+
 function Scheduler:new(o)
    local o = o or {readyq = {},
 	     sleeping = {},
@@ -175,8 +176,13 @@ function Scheduler:new(o)
 	     names={}
 	  }
    o.callmanager= CallManager:new(o, "das esch de rap shit")
+
    setmetatable(o,self)
    self.__index = self
+   print(o)
+   print("--- foreach ---")
+   table.foreach(o, print)
+   print("--- end ---")
    return o
 end
 

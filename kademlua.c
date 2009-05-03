@@ -595,6 +595,36 @@ int main(int argc, char **argv) {
   
 
   {
+    lua_newtable(mstate);
+    for (int i = 0; i < argc; i++) {
+      lua_pushnumber(mstate, i);
+      lua_pushstring(mstate, argv[i]);
+      lua_settable(mstate, -3);
+    }
+    lua_setglobal(mstate, "argv");
+  }
+
+  int res = luaL_loadfile(mstate, "params.lua");
+  if (res != 0) {
+    printf("error loading params.lua\n");
+    exit(1);
+  }
+
+  lua_call(mstate, 0, 0);
+
+  lua_getglobal(mstate, "port");
+  if (!lua_isnumber(mstate, -1)) {
+    printf("port variable not correctly set in params.lua");
+    exit(1);
+  }
+  
+  port = (int) lua_tonumber(mstate, -1);
+
+  lua_settop(mstate, 0);
+  
+
+
+  {
     int res;
     mysockaddr.sin_family = AF_INET;
     mysockaddr.sin_addr.s_addr = INADDR_ANY;
