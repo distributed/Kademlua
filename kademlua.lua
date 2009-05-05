@@ -57,14 +57,16 @@ end
 function packethandler()
    while 1 do
       local packet = coroutine.yield("gp")
+
+      print("GOT A PACKET!")
       
-      local rpacket = {to=packet.from, 
-		rpcid=packet.rpcid, 
-		fromid="liveshitliveshitxxXX",
-		call = 128}
-      local rraw = encodepacket(rpacket)
-      print("raw len: " .. #rraw)
-      coroutine.yield("p", {to=packet.from, raw=rraw})
+      --local rpacket = {to=packet.from, 
+	--	rpcid=packet.rpcid, 
+	--	fromid="liveshitliveshitxxXX",
+	--	call = 128}
+      --local rraw = encodepacket(rpacket)
+      --print("raw len: " .. #rraw)
+      --coroutine.yield("p", {to=packet.from, raw=rraw})
 
       --print("PACKET HANDLE CALL", packet)
       --table.foreach(packet.from, print)

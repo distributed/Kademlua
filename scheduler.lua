@@ -184,6 +184,21 @@ function Scheduler:new(node)
    print("--- foreach ---")
    table.foreach(o, print)
    print("--- end ---")
+   local dispatch = {y = self.handleyield,
+		     c = self.handlecall,
+		     r = self.handlerun,
+		     s = self.handlesleep,
+		     p = self.handlepacket,
+		     cs = self.handlechannelsend,
+		     cr = self.handlechannelreceive,
+		     req = self.handlereq,
+		     wreq = self.handlewreq,
+		     resp = self.handleresp,
+		     reg = self.handlereg,
+		     gp = self.handlegetpackets
+		  }
+		     
+   o.dispatch = dispatch
    return o
 end
 
@@ -225,130 +240,138 @@ end
 
 
 
-function Scheduler:handlecall(callres)
+--function Scheduler:handlecall(callres)
    
-   if callres[2] == "y" then
+function Scheduler:handleyield(callres)
+   table.insert(self.readyq, {proc=self.running, args={}})
+end
 
+
+function Scheduler:handlecall(callres)
+   local linkproc = self.running
+   table.remove(callres,1)
+   table.remove(callres,1)
+   local func = table.remove(callres, 1)
+   if func == nil then print("!HAS to be a function") end
+   self:callf(func, linkproc, unpack(callres))
+end
+
+function Scheduler:handlerun(callres)
+   table.remove(callres,1)
+   table.remove(callres,1)
+   local func = table.remove(callres, 1)
+   if func == nil then print("!HAS to be a function") end
+   self:runf(func, unpack(callres))
+   table.insert(self.readyq, {proc=self.running, args={}})
+end
+
+function Scheduler:handlesleep(callres)
+   local howlong = callres[3]
+   local wakeup = ec.time() + howlong
+   table.insert(self.sleeping, {proc=self.running, wakeup=wakeup})
+   table.sort(self.sleeping, function(a,b) return a.wakeup > b.wakeup end)
+end
+
+function Scheduler:handlepacket(callres)
+   local packet = callres[3]
+   --table.insert(self.packetq, packet)
+   --table.insert(self.readyq, {proc=self.running, args={}})
+   self.callmanager:outgoing(self.running, packet)
+end
+
+function Scheduler:handlechannelsend(callres)
+   local channel = callres[3]
+   local args = callres[4] or {}
+   
+   
+   if channel.receiving:length() > 0 then
+      receiver = channel.receiving:popleft()
+      table.insert(self.readyq, {proc=receiver.proc, args=args})
       table.insert(self.readyq, {proc=self.running, args={}})
-
-   elseif callres[2] == "c" then
-
-      local linkproc = self.running
-      table.remove(callres,1)
-      table.remove(callres,1)
-      local func = table.remove(callres, 1)
-      if func == nil then print("!HAS to be a function") end
-      self:callf(func, linkproc, unpack(callres))
-
-   elseif callres[2] == "r" then
-
-      table.remove(callres,1)
-      table.remove(callres,1)
-      local func = table.remove(callres, 1)
-      if func == nil then print("!HAS to be a function") end
-      self:runf(func, unpack(callres))
-      table.insert(self.readyq, {proc=self.running, args={}})
-
-   elseif callres[2] == "s" then
-
-      local howlong = callres[3]
-      local wakeup = ec.time() + howlong
-      table.insert(self.sleeping, {proc=self.running, wakeup=wakeup})
-      table.sort(self.sleeping, function(a,b) return a.wakeup > b.wakeup end)
-
-   elseif callres[2] == "p" then
-
-      local packet = callres[3]
-      --table.insert(self.packetq, packet)
-      --table.insert(self.readyq, {proc=self.running, args={}})
-      self.callmanager:outgoing(self.running, packet)
-
-   elseif callres[2] == "cs" then
-
-      local channel = callres[3]
-      local args = callres[4] or {}
-
-      
-      if channel.receiving:length() > 0 then
-	 receiver = channel.receiving:popleft()
-	 table.insert(self.readyq, {proc=receiver.proc, args=args})
-	 table.insert(self.readyq, {proc=self.running, args={}})
-      else
-	 channel.sending:pushright({proc=self.running, args=args})
-      end
-      
-   elseif callres[2] == "cr" then
-
-      local channel = callres[3]
-
-      if channel.sending:length() > 0 then
-	 sender = channel.sending:popleft()
-	 table.insert(self.readyq, {proc=self.running, args=sender.args})
-	 table.insert(self.readyq, {proc=sender.procs, args={}})
-      else
-	 channel.receiving:pushright({proc=self.running, args=callres})
-      end
-
-   elseif callres[2] == "req" then
-
-      local nameorpid = callres[3]
-      local req = callres[4]
-      local pid
-      local proc = false
-      if type(nameorpid) == "number" then
-	 pid = nameorpid
-	 proc = self.procs[pid]
-      else
-	 proc = self.names[nameorpid]
-	 if proc == nil then
-	    table.insert(self.readyq, {proc=self.running, args={false}})
-	    return
-	 end
-	 pid = proc.pid
-	 print(proc,pid)
-      end
-
-      if proc.waitingforreq then
-	 proc.waitingforreq = nil
-	 table.insert(self.readyq, {proc=proc, args={self.running, req}})
-      else
-	 print("filling reqq")
-	 table.insert(proc.reqq, {proc=self.running, req=req})
-      end
-
-   elseif callres[2] == "wreq" then
-
-      local running = self.running
-      if #(running.reqq) > 0 then
-	 local reqt = table.remove(running.reqq, 1)
-	 table.insert(self.readyq, {proc=running, args={reqt.proc, reqt.req}})
-      else
-	 running.waitingforreq = true
-      end
-
-   elseif callres[2] == "resp" then
-
-      local to = callres[3]
-      local resp = callres[4]
-
-      if not (to and resp) then
-	 print("BAD resp CALL")
-      else
-	 table.insert(self.readyq, {proc=to, args={resp}})
-      end
-      table.insert(self.readyq, {proc=self.running, args={}})
-
-   elseif callres[2] == "reg" then
-
-      local name = callres[3]
-
-      table.insert(self.running.names, name)
-      self.names[name] = self.running
-      table.insert(self.readyq, {proc=self.running, args={}})
-
    else
-      print("unknown call from pid " .. self.running.pid)
+      channel.sending:pushright({proc=self.running, args=args})
    end
+   
+end
+
+function Scheduler:handlechannelreceive(callres)
+   local channel = callres[3]
+   
+   if channel.sending:length() > 0 then
+      sender = channel.sending:popleft()
+      table.insert(self.readyq, {proc=self.running, args=sender.args})
+      table.insert(self.readyq, {proc=sender.procs, args={}})
+   else
+      channel.receiving:pushright({proc=self.running, args=callres})
+   end
+end
+
+
+function Scheduler:handlereq(callres)
+   local nameorpid = callres[3]
+   local req = callres[4]
+   local pid
+   local proc = false
+   if type(nameorpid) == "number" then
+      pid = nameorpid
+      proc = self.procs[pid]
+   else
+      proc = self.names[nameorpid]
+      if proc == nil then
+	 table.insert(self.readyq, {proc=self.running, args={false}})
+	 return
+      end
+      pid = proc.pid
+      print(proc,pid)
+   end
+   
+   if proc.waitingforreq then
+      proc.waitingforreq = nil
+      table.insert(self.readyq, {proc=proc, args={self.running, req}})
+   else
+      print("filling reqq")
+      table.insert(proc.reqq, {proc=self.running, req=req})
+   end
+end
+   
+   
+function Scheduler:handlewreq(callres)
+   local running = self.running
+   if #(running.reqq) > 0 then
+      local reqt = table.remove(running.reqq, 1)
+      table.insert(self.readyq, {proc=running, args={reqt.proc, reqt.req}})
+   else
+      running.waitingforreq = true
+   end
+end
+
+
+function Scheduler:handleresp(callres)
+   local to = callres[3]
+   local resp = callres[4]
+   
+   if not (to and resp) then
+      print("BAD resp CALL")
+   else
+      table.insert(self.readyq, {proc=to, args={resp}})
+   end
+   table.insert(self.readyq, {proc=self.running, args={}})
+end
+
+function Scheduler:handlereg(callres)
+   local name = callres[3]
+   
+   table.insert(self.running.names, name)
+   self.names[name] = self.running
+   table.insert(self.readyq, {proc=self.running, args={}})
+end
+
+function Scheduler:handlegetpackets(callres) 
+   self.waitingforpacketproc = self.running
+end
+
+function Scheduler:handleunknown(callres)
+   print("unknown call from pid " .. self.running.pid)
 end
 
 
@@ -378,7 +401,13 @@ function Scheduler:runone()
 
    local state = coroutine.status(coro)
    if state ~= "dead" then
-      self:handlecall(callres)
+      --self:handlecall(callres)
+      local dispatchfunc = self.dispatch[callres[2]]
+      if dispatchfunc == nil then
+	 print("NO CALL DISPATCHER FOUND FOR " .. tostring(callres[2]))
+      else
+	 dispatchfunc(self, callres)
+      end
    else
       self.numrunning = self.numrunning - 1
       self.procs[pid] = nil
@@ -468,12 +497,18 @@ function Scheduler:run()
 	 retval = ec.getevent(timeout, self.packetq)
 	 self.packetq = {}
 	 if retval ~= nil and retval.type == "sock" then
-	    decodepacket(retval)
+	    --decodepacket(retval)
 
-	    self.callmanager:incoming({retval})
+	    --self.callmanager:incoming({retval})
 	    -- srun doesn't work because we can't yield to ourself
 	    -- srun(runcall, retval)
 	    --self:runf(runcall, retval)
+
+	    local wp = self.waitingforpacketproc
+	    if wp then
+	       table.insert(self.readyq, {proc=wp, args={retval}})
+	    end
+	    self.waitingforpacketproc = nil
 	 end
       --else
 	 --break
