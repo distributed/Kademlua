@@ -2,6 +2,7 @@ require("protocol")
 require("scheduler")
 require("call")
 require("node")
+require("routing")
 
 math.randomseed(ec.time())
 

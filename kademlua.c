@@ -487,7 +487,7 @@ static int xor(lua_State *L) {
 
   for (int i = 0; i < (len1 / sizeof(HASH_SECT)); i++) {
     outsect[i] = sect1[i] ^ sect2[i]; 
-    printf("%x ^ %x == %x\n", sect1[i], sect2[i], sect1[i] ^ sect2[i]);
+    //printf("%x ^ %x == %x\n", sect1[i], sect2[i], sect1[i] ^ sect2[i]);
   }
 
 
