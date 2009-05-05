@@ -71,14 +71,55 @@ function packethandler()
 end
 
 
+function hin(c)
+   local i = 0
+   while 1 do
+      ssleep(1.0)
+      print "hin"
+      c:send(i)
+      i = i + 1
+   end
+end
+
+function her(c)
+   while 1 do
+      local a = c:receive()
+      print("her: " .. tostring(a))
+   end
+end
+
+
+function server()
+   sregister("srv")
+   while 1 do
+      from, req = swreq()
+      print("req from pid " .. tostring(from.pid) .. ":")
+      table.foreach(req, print)
+      sresp(from, {})
+   end
+end
+
+function client(name)
+   sreq("srv", {a="1", b="2",name=name})
+   print(name, "DONE!")
+end
+
 function f1()   
+   local c = Channel:new()
+   srun(server)
+   srun(client)
+   srun(hin, c)
+   srun(her, c)
    srun(packethandler)
    srun(ping, {addr="192.168.1.5", port=9000})
+   srun(client, "c2")
+   srun(client, "c3")
 
    srun(printn, 3)
    ssleep(2.0)
    syield()
    local errorfree, ret = scall(f2)
+   srun(client, "c4")
    return "retval f1", ret
 end
 s1:runf(f1, "arg1", "and arg 2")

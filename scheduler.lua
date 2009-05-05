@@ -33,6 +33,36 @@ function ssleep(howlong)
 end
 
 
+function sregister(name)
+   if name == nil then error("name has to be given") end
+   return coroutine.yield("reg", name)
+end
+
+
+function sreq(nameorpid, req)
+   local t = type(nameorpid)
+   if t ~= "string" and t ~= number then error("first parameter has to be name or pid") end
+   if type(req) ~= "table" then error("req has to be a table") end
+
+   return coroutine.yield("req", nameorpid, req)
+end
+
+
+
+function swreq()
+   local req, from = coroutine.yield("wreq")
+   return req, from
+end
+
+
+function sresp(to, resp)
+   if not type(to) == "table" then error("to needs to be a proc table") end
+   if not to.pid then error("to needs to be a proc table, with a pid") end
+   if not type(resp) == "table" then error("the response needs to be a table") end
+   coroutine.yield("resp", to, resp)
+end
+
+
 
 function runcall(packet)
    errorfree, retpack = scall(handlecall, packet)
@@ -53,18 +83,96 @@ function handlecall(packet)
 end
 
 
+
+
+Deque = {}
+function Deque:new ()
+   local o = {first = 0, last = -1}
+
+   setmetatable(o,self)
+   self.__index = self
+   return o
+end
+
+
+function Deque.pushleft (list, value)
+   local first = list.first - 1
+   list.first = first
+   list[first] = value
+end
+
+function Deque.pushright (list, value)
+   local last = list.last + 1
+   list.last = last
+   list[last] = value
+end
+
+function Deque.popleft (list)
+   local first = list.first
+   if first > list.last then error("list is empty") end
+   local value = list[first]
+   list[first] = nil        -- to allow garbage collection
+   list.first = first + 1
+   return value
+end
+
+function Deque.popright (list)
+   local last = list.last
+   if list.first > last then error("list is empty") end
+   local value = list[last]
+   list[last] = nil         -- to allow garbage collection
+   list.last = last - 1
+   return value
+end
+
+function Deque.length(list)
+   return list.last - list.first + 1
+end
+
+
+
+
+
+Channel = {
+}
+
+function Channel:new()
+   local o = { sending = Deque:new(),
+	       receiving = Deque:new()
+	    }
+
+   setmetatable(o,self)
+   self.__index = self
+   return o
+end
+
+function Channel:send(...)
+   --print(args)
+   coroutine.yield("cs", self, arg)
+end
+
+function Channel:receive()
+   ret = {coroutine.yield("cr", self)}
+   --table.remove(ret, 1)
+   return unpack(ret)
+end
+
+
+
+
 -- the Scheduler implementation
 Scheduler = {
 }
 
 
 function Scheduler:new(o)
-   o = o or {readyq = {},
+   local o = o or {readyq = {},
 	     sleeping = {},
 	     packetq = {},
 	     nextpid = 1,
 	     numrunning = 0,
-	     procs = {}
+	     procs = {},
+	     names={}
 	  }
    o.callmanager= CallManager:new(o, "das esch de rap shit")
    setmetatable(o,self)
@@ -79,7 +187,7 @@ function Scheduler:runf(func, ...)
    local pid = self.nextpid
 
    self.nextpid = self.nextpid + 1
-   local proc = {pid=pid, coro=coro}
+   local proc = {pid=pid, coro=coro, names={}, reqq={}}
    self.procs[pid] = proc
    --print("started pid " .. tostring(pid))
 
@@ -97,7 +205,7 @@ function Scheduler:callf(func, linkproc, ...)
    local pid = self.nextpid
 
    self.nextpid = self.nextpid + 1
-   local proc = {pid=pid, coro=coro, linkproc=linkproc}
+   local proc = {pid=pid, coro=coro, linkproc=linkproc, names={}, reqq={}}
    self.procs[pid] = proc
    --print("started pid " .. tostring(pid) .. " linked to " ..linkproc.pid)
 
@@ -148,6 +256,89 @@ function Scheduler:handlecall(callres)
       --table.insert(self.readyq, {proc=self.running, args={}})
       self.callmanager:outgoing(self.running, packet)
 
+   elseif callres[2] == "cs" then
+
+      local channel = callres[3]
+      local args = callres[4] or {}
+
+      
+      if channel.receiving:length() > 0 then
+	 receiver = channel.receiving:popleft()
+	 table.insert(self.readyq, {proc=receiver.proc, args=args})
+	 table.insert(self.readyq, {proc=self.running, args={}})
+      else
+	 channel.sending:pushright({proc=self.running, args=args})
+      end
+      
+   elseif callres[2] == "cr" then
+
+      local channel = callres[3]
+
+      if channel.sending:length() > 0 then
+	 sender = channel.sending:popleft()
+	 table.insert(self.readyq, {proc=self.running, args=sender.args})
+	 table.insert(self.readyq, {proc=sender.procs, args={}})
+      else
+	 channel.receiving:pushright({proc=self.running, args=callres})
+      end
+
+   elseif callres[2] == "req" then
+
+      local nameorpid = callres[3]
+      local req = callres[4]
+      local pid
+      local proc = false
+      if type(nameorpid) == "number" then
+	 pid = nameorpid
+	 proc = self.procs[pid]
+      else
+	 proc = self.names[nameorpid]
+	 if proc == nil then
+	    table.insert(self.readyq, {proc=self.running, args={false}})
+	    return
+	 end
+	 pid = proc.pid
+	 print(proc,pid)
+      end
+
+      if proc.waitingforreq then
+	 proc.waitingforreq = nil
+	 table.insert(self.readyq, {proc=proc, args={self.running, req}})
+      else
+	 print("filling reqq")
+	 table.insert(proc.reqq, {proc=self.running, req=req})
+      end
+
+   elseif callres[2] == "wreq" then
+
+      local running = self.running
+      if #(running.reqq) > 0 then
+	 local reqt = table.remove(running.reqq, 1)
+	 table.insert(self.readyq, {proc=running, args={reqt.proc, reqt.req}})
+      else
+	 running.waitingforreq = true
+      end
+
+   elseif callres[2] == "resp" then
+
+      local to = callres[3]
+      local resp = callres[4]
+
+      if not (to and resp) then
+	 print("BAD resp CALL")
+      else
+	 table.insert(self.readyq, {proc=to, args={resp}})
+      end
+      table.insert(self.readyq, {proc=self.running, args={}})
+
+   elseif callres[2] == "reg" then
+
+      local name = callres[3]
+
+      table.insert(self.running.names, name)
+      self.names[name] = self.running
+      table.insert(self.readyq, {proc=self.running, args={}})
+
    else
       print("unknown call from pid " .. self.running.pid)
    end
@@ -183,6 +374,11 @@ function Scheduler:runone()
       self:handlecall(callres)
    else
       self.numrunning = self.numrunning - 1
+      self.procs[pid] = nil
+      -- delete registered names
+      for i, name in ipairs(proc.names) do
+	 self.names[name] = nil
+      end
       --print("numrunning: " .. self.numrunning)
       if proc.linkproc ~= nil then
 	 --print("adding linked proc to the ready queue")
