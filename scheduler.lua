@@ -166,16 +166,17 @@ Scheduler = {
 
 
 
-function Scheduler:new(o)
-   local o = o or {readyq = {},
-	     sleeping = {},
-	     packetq = {},
-	     nextpid = 1,
-	     numrunning = 0,
-	     procs = {},
-	     names={}
-	  }
-   o.callmanager= CallManager:new(o, "das esch de rap shit")
+function Scheduler:new(node)
+   local o ={ readyq = {},
+	      sleeping = {},
+	      packetq = {},
+	      nextpid = 1,
+	      numrunning = 0,
+	      procs = {},
+	      names={},
+	      node=node
+	   }
+   o.callmanager= CallManager:new(o, node)
 
    setmetatable(o,self)
    self.__index = self
