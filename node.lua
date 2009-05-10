@@ -4,8 +4,9 @@ KademluaNode = {}
 
 function KademluaNode:new(id)
    local id = id or ec.sha1(tostring(math.random()))
-   local o = {id=id
-        }
+   local o = {id = id,
+	   }
+   o.callmanager = CallManager:new(o)
 
 
    setmetatable(o,self)
@@ -15,6 +16,7 @@ end
 
 
 function KademluaNode:ping(who)
+
    local rpcid = string.sub(ec.sha1(tostring(math.random())), 1, 8)
    local packet = {to=who,
 		   rpcid=rpcid,
@@ -23,8 +25,10 @@ function KademluaNode:ping(who)
    local raw = encodepacket(packet)
    packet.raw = raw
    --print("yielding packet")
-   coroutine.yield("p", packet)
-		   
+   --coroutine.yield("p", packet)
+   print("PING REQUEST")
+   sreq("callmanager", packet)
+   print("PING TO " .. who.addr .. ":" .. who.port)  
 end
 
 function KademluaNode:inping(packet)
@@ -40,4 +44,10 @@ function KademluaNode:inping(packet)
    print("~~~~~~~~~ PONG! len " .. tostring(#outpack.raw) .. " " .. self.id)
    
    return {outpack}
+end
+
+
+function KademluaNode:run()
+   srun(self.callmanager.outgoingloop, self.callmanager)
+   srun(self.callmanager.incomingloop, self.callmanager)
 end

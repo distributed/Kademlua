@@ -23,6 +23,11 @@ function srun(func, ...)
    --return unpack(ret)
 end
 
+function spacket(packet)
+   if not type(packet) == "table" then error("need a packet") end
+   coroutine.yield("p", packet)
+end
+
 
 function ssleep(howlong)
    if type(howlong) ~= "number" then
@@ -176,7 +181,7 @@ function Scheduler:new(node)
 	      names={},
 	      node=node
 	   }
-   o.callmanager= CallManager:new(o, node)
+   --o.callmanager= CallManager:new(o, node)
 
    setmetatable(o,self)
    self.__index = self
@@ -276,7 +281,9 @@ function Scheduler:handlepacket(callres)
    local packet = callres[3]
    --table.insert(self.packetq, packet)
    --table.insert(self.readyq, {proc=self.running, args={}})
-   self.callmanager:outgoing(self.running, packet)
+   --self.callmanager:outgoing(self.running, packet)
+   table.insert(self.packetq, packet)
+   table.insert(self.readyq, {proc=self.running, args={}})
 end
 
 function Scheduler:handlechannelsend(callres)
@@ -349,9 +356,15 @@ end
 function Scheduler:handleresp(callres)
    local to = callres[3]
    local resp = callres[4]
-   
+   print("type of resp: " .. type(resp))
    if not (to and resp) then
-      print("BAD resp CALL")
+      print("BAD resp CALL, here it goes:")
+      print("to:")
+      table.foreach(to, print)
+      print()
+      print("resp:")
+      table.foreach(resp, print)
+      error("BAD RESP", 3)
    else
       table.insert(self.readyq, {proc=to, args={resp}})
    end
@@ -367,6 +380,7 @@ function Scheduler:handlereg(callres)
 end
 
 function Scheduler:handlegetpackets(callres) 
+   if self.waitingforpacketproc ~= nil then error("we already have a proc handling packets") end
    self.waitingforpacketproc = self.running
 end
 
@@ -506,7 +520,7 @@ function Scheduler:run()
 
 	    local wp = self.waitingforpacketproc
 	    if wp then
-	       table.insert(self.readyq, {proc=wp, args={retval}})
+	       table.insert(self.readyq, {proc=wp, args={{retval}}})
 	    end
 	    self.waitingforpacketproc = nil
 	 end

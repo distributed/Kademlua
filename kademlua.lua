@@ -112,14 +112,17 @@ function f1()
    local c = Channel:new()
    srun(server)
    srun(client)
-   srun(hin, c)
-   srun(her, c)
-   srun(packethandler)
+   --srun(hin, c)
+   --srun(her, c)
+   --srun(packethandler)
    srun(ping, {addr="192.168.1.5", port=9000})
    srun(client, "c2")
    srun(client, "c3")
 
 
+   local node = KademluaNode:new(id)
+   srun(node.run, node)
+   
    for i, to in ipairs(bootstrap) do
       srun(node.ping, node, to)
    end
@@ -132,8 +135,34 @@ function f1()
    return "retval f1", ret
 end
 
-node = KademluaNode:new(id)
-s1 = Scheduler:new(node)
+
+function yielder()
+   while 1 do
+      coroutine.yield()
+   end
+end
+resume=coroutine.resume
+function bm()
+   local y = coroutine.create(yielder)
+   local i = 0
+   local rs = coroutine.resume
+
+   local t1 = ec.time()
+   while i < 1e7 do
+      --coroutine.resume(y) -- 4.7s
+      --rs(y)               -- 3.9s
+      --resume(y)           -- 4.35s
+      i = i + 1
+   end
+   local t2 = ec.time()
+   print("diff:", t2-t1)
+   os.exit(0)
+end
+
+--bm()
+
+--node = KademluaNode:new(id)
+s1 = Scheduler:new()
 s1:runf(f1, "arg1", "and arg 2")
 
 -- wait for all coroutines to finish
