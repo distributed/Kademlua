@@ -13,9 +13,11 @@ function CallManager:new(node)
    local o = {running = {},
 	      scheduler = scheduler,
 	      node = node,
-	      ownid = node.id
+	      ownid = node.id,
+	      routingtable = node.routingtable
 	  }
    if o.ownid == nil then error("need an ID",2) end
+   if type(o.routingtable) ~= "table" then error("need a routing table in the node") end
    setmetatable(o,self)
    self.__index = self
    return o
@@ -64,6 +66,7 @@ function CallManager:incoming(packets)
       -- prevent loopback
       if rpcid ~= self.ownid then
 	 --table.foreach(self.running, print)
+	 self.routingtable:seenode(packet.from)
 	 if self.running[rpcid] ~= nil then
 	    local callt = self.running[rpcid]
 

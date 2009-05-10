@@ -5,6 +5,7 @@ KademluaNode = {}
 function KademluaNode:new(id)
    local id = id or ec.sha1(tostring(math.random()))
    local o = {id = id,
+	      routingtable = RoutingTable:new(id)
 	   }
    o.callmanager = CallManager:new(o)
 

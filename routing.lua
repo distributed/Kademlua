@@ -87,10 +87,12 @@ function RoutingTable:seenode(node)
 
    local unique = node.unique
    local nodeid = node.id
+   
+   -- loopback
+   if nodeid == self.id then return end
 
    local distance = ec.xor(self.id, nodeid)
 
-   
    -- copy node info
    node = {addr=node.addr, 
 	   port=node.port, 
@@ -101,12 +103,14 @@ function RoutingTable:seenode(node)
    local bucketno, i = self:getpos(node)
    if bucketno then
       -- move to tail of LRS queue
-      node = self:removenodeatpos(node, bucketno, i)
+      -- node = self:removenodeatpos(node, bucketno, i)
+      node = self:removenodeatpos(bucketno, i)
       self:insertnodeinbucket(node, bucketno)
    else
       -- insert a new node
       self:newnode(node)
    end
+   self:print()
 end
 
 
