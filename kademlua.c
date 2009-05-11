@@ -30,6 +30,7 @@ lua_State *mstate;
 int sock;
 int port;
 struct sockaddr_in mysockaddr;
+int readfromstdin;
 
 void notdecoded(lua_State *L) {
 
@@ -277,7 +278,8 @@ static int getevent(lua_State *L) {
 
   fd_set rset;
   FD_ZERO(&rset);
-  FD_SET(0,    &rset);
+  if (readfromstdin)
+    FD_SET(0,    &rset);
   FD_SET(sock, &rset);
 
 
@@ -287,7 +289,10 @@ static int getevent(lua_State *L) {
 
   if (FD_ISSET(0, &rset)) {
     char buf[1024];
-    buf[read(0, buf, 1023)] = 0;
+    int bytesread = read(0, buf, 1023);
+    buf[bytesread] = 0;
+    if (bytesread == 0) 
+      readfromstdin = 0;
     //printf("read: %s", buf);    
    
     //lua_pushstring(mstate, buf);
@@ -570,7 +575,7 @@ static const struct luaL_reg eclib[] = {
 
 int main(int argc, char **argv) {
 
-
+  readfromstdin = 1;
   port = DEFAULT_PORT;
 
   mstate = lua_open();
