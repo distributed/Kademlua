@@ -44,6 +44,7 @@ function sregister(name)
 end
 
 
+-- TODO: should raise an error if there is is one ;)
 function sreq(nameorpid, req)
    local t = type(nameorpid)
    if t ~= "string" and t ~= number then error("first parameter has to be name or pid") end
