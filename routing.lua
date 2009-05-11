@@ -38,8 +38,8 @@ function RoutingTable:getpos(node)
 	 if node.unique == nodei.unique then
 	    return bucketno, i
 	 end
-	 error("inconsistent routing table")
       end
+      error("inconsistent routing table")
    else
       return false
    end
