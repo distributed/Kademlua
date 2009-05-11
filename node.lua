@@ -49,8 +49,14 @@ function KademluaNode:incomingRPC(packet)
    if not (type(payload.name) == "string") then return end
    if not (type(payload.args) == "table") then return end
 
+   --print("incoming args for " .. payload.name .. "  =========>")
+   --table.foreach(payload.args, print)
+   --print("<======================")
+
    local func = self.rpcdispatch[payload.name]
-   local ret = {func(unpack(payload.args))}
+   -- unknown RPC, TODO: handle this in a better way
+   if func == nil then return {} end
+   local ret = {func(self, packet.from, unpack(payload.args))}
    
    local retpacket = {to=packet.from,
 		      fromid=self.id,
@@ -83,7 +89,7 @@ function KademluaNode:ping(who)
    print("----")
 end
 
-function KademluaNode:inping()
+function KademluaNode:inping(from)
 
    print("INPING")
    
@@ -100,11 +106,66 @@ function KademluaNode:inping()
    return 5
 end
 
-function KademluaNode:infindnode(id)
+--function KademluaNode:infindnode(id)
+--   if type(id) ~= "string" then return 0 end
+--   if #id ~= 20 then return 0 end
+--
+--   
+--end
+
+
+function KademluaNode:infindnode(from, id)
+   print("infnindnode", id)
    if type(id) ~= "string" then return 0 end
    if #id ~= 20 then return 0 end
 
+   local ret = {}
+   local insert = table.insert
+   local entries = self.routingtable:getclosest(id)
+   local fromid = from.id
+   for i, v in ipairs(entries) do
+      if v.id ~= fromid then insert(ret, {v.addr, v.port, v.id}) end
+   end
    
+   return ret
+end
+
+function KademluaNode:findnode(who, id)
+
+   local errorfree, nodelist = self:sendRPC(who, "findnode", id)
+   print("FINDNODE " .. who.addr .. ":" .. who.port .. "  =>  " .. tostring(errorfree))
+
+   if not errorfree then return end
+ 
+   for i, n in ipairs(nodelist) do
+      local addr = n[1]
+      print("//// " .. addr)
+      -- TODO: should check for a valid or a kind-of-valid IP
+      if type(addr) == "string" then
+        print"addr"
+        local port = n[2]
+        if type(port) == "number" and port > 0 and port <= 0xffff then
+           print"port"
+           local id = n[3]
+           if type(id) == "string" and #id == 20 then
+              print("id")
+              local unique = addr .. ":" .. port .. ":" .. id
+              local node = {addr=addr,
+                            port=port,
+                            id=id,
+                            unique=unique
+                         }
+              print(addr .. ":" .. port .. ":" .. ec.tohex(id))
+              self.routingtable:seenode(node)
+           end
+        end
+      end
+   end
+   print()
+   print()
+   self.routingtable:print()
+   print()
+
 end
 
 

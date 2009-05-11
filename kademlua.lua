@@ -126,6 +126,7 @@ function f1()
    
    for i, to in ipairs(bootstrap) do
       srun(node.ping, node, to)
+      srun(node.findnode, node, to, "das esch de rap shit")
    end
 
    srun(printn, 3)
