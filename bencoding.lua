@@ -36,7 +36,7 @@ local function decode_list(s, pos)
 		a[#a + 1], pos = decode(s, pos)
 	end
 	_, pos = assert(s:find("^e", pos))
-	return a, pos
+	return a, pos + 1
 end
  
 local function decode_dict(s, pos)
@@ -53,7 +53,7 @@ local function decode_dict(s, pos)
 		d[k], pos = decode(s, pos)
 	end
 	_, pos = assert(s:find("^e", pos))
-	return d, pos
+	return d, pos + 1
 end
  
 type_decoder = {
