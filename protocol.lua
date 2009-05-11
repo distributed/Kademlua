@@ -30,6 +30,21 @@ function encodepacket(info, headervers)
       table.insert(chunks, fromid)
       table.insert(chunks, rpcid)
       table.insert(chunks, string.char(call))
+
+      if info.payload and (call == 1 or call==129) then
+	 local encoded = bencode(info.payload)
+	 local len = #encoded
+
+	 if len > 0xffff then error("payload too long") end
+
+	 -- generate single bytes for encoding in network byte order
+	 local msb = math.floor(len / 256)
+	 local lsb = len - (msb * 256)
+
+	 table.insert(chunks, string.char(msb))
+	 table.insert(chunks, string.char(lsb))
+	 table.insert(chunks, encoded)
+      end
    else
 
    end
@@ -63,7 +78,25 @@ function decodepacket(packet)
       packet.from.unique = packet.from.addr .. ":" .. packet.from.port .. ":" .. fromid
       packet.rpcid = rpcid
       packet.call = call
-      packet.decoded = true
+      if packet.call == 1 or packet.call == 129 then
+	 local msb = string.byte(raw:sub(31, 31))
+	 if msb == nil then
+	    packet.payload = {}
+	    packet.decoded = true
+	    return
+	 end
+	 local lsb = string.byte(raw:sub(32, 32))
+	 if lsb == nil then return end
+
+	 local len = (msb * 256) + lsb
+	 local encoded = raw:sub(33, 33 + len - 1)
+	 if #encoded ~= len then return end
+	 local payload = debencode(encoded)
+	 packet.payload = payload
+	 
+	 packet.decoded = true
+      end
+
       return
    else
       return

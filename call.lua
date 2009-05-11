@@ -31,7 +31,7 @@ function CallManager:timeoutf(rpcid, howsoon)
       print("CALL TIMED OUT")
       runningt = self.running[rpcid]
       self.running[rpcid] = nil
-      sresp(runningt.proc, {false})
+      sresp(runningt.proc, {reply=false})
       --table.insert(self.scheduler.readyq, {proc=runningt.proc, args={false}})
    else
       -- do nothing ...
@@ -77,7 +77,7 @@ function CallManager:incoming(packets)
 		     -- we initiated that call
 		     print("incoming response, rpc id " .. rpcid)
 		     self.running[rpcid] = nil
-		     sresp(callt.proc, {true})
+		     sresp(callt.proc, {reply=true, payload=packet.payload})
 		     --table.insert(self.scheduler.readyq, {proc=callt.proc, args={}})
 		  else
 		     print ("callers ID does not match")
@@ -95,10 +95,13 @@ function CallManager:incoming(packets)
 	 else
 	    if packet.call < 128 then
 	       print("incoming call")
-	       if packet.call == 1 then
-		  outpacks = self.node:inping(packet)
-	       end
+	       --if packet.call == 1 then
+	       --  outpacks = self.node:inping(packet)
+	       --end
+	       outpacks = self.node:incomingRPC(packet)
 	       for i, pack in ipairs(outpacks) do
+		  local raw = encodepacket(pack)
+		  pack.raw = raw
 		  spacket(pack)
 		  --table.insert(self.scheduler.packetq, pack)
 	       end
@@ -114,7 +117,7 @@ end
 
 function CallManager:outgoing(proc, packet)
    
-   local rpcid = string.sub(ec.tohex(ec.sha1(tostring(math.random()))), 1, 8)
+   local rpcid = string.sub(ec.sha1(tostring(math.random())), 1, 8)
    --rpcid = "64bitqnt"
    
    packet.rpcid = rpcid

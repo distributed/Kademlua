@@ -3,6 +3,7 @@ require("scheduler")
 require("call")
 require("node")
 require("routing")
+require("bencoding")
 
 math.randomseed(ec.time())
 
@@ -109,15 +110,15 @@ function client(name)
 end
 
 function f1()   
-   local c = Channel:new()
-   srun(server)
-   srun(client)
+   --local c = Channel:new()
+   --srun(server)
+   --srun(client)
    --srun(hin, c)
    --srun(her, c)
    --srun(packethandler)
-   srun(ping, {addr="192.168.1.5", port=9000})
-   srun(client, "c2")
-   srun(client, "c3")
+   --srun(ping, {addr="192.168.1.5", port=9000})
+   --srun(client, "c2")
+   --srun(client, "c3")
 
 
    local node = KademluaNode:new(id)
@@ -131,7 +132,7 @@ function f1()
    ssleep(2.0)
    syield()
    local errorfree, ret = scall(f2)
-   srun(client, "c4")
+   --srun(client, "c4")
    return "retval f1", ret
 end
 
