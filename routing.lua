@@ -16,6 +16,18 @@ function RoutingTable:new(id)
 end
 
 
+function RoutingTable.strcomp(a, b)
+   if #a ~= #b then error("strings have to be of the same length", 2) end
+   local i = 1
+   local len = #a
+   while i <= len do
+      if string.byte(a, i) < string.byte(b, i) then return true end
+      i = i + 1
+   end
+   return false
+end
+
+
 function RoutingTable:getpos(node)
    local bucketno = math.min(ec.getbucketno(node.distance), self.maxbucket)
 
@@ -110,9 +122,55 @@ function RoutingTable:seenode(node)
       -- insert a new node
       self:newnode(node)
    end
-   self:print()
+   --self:print()
 end
 
+
+function RoutingTable:getclosest(id, n)
+   local n = n or 20
+   local distance = ec.xor(self.id, id)
+
+   local bucketno = math.min(ec.getbucketno(distance), self.maxbucket)
+
+   local ret = {}
+   local basebucket = self.buckets[bucketno]
+   local inorder = basebucket.inorder
+   local bound = math.min(n, basebucket.count)
+   for i=1,bound do table.insert(ret, inorder[i]) end
+   local retn = bound
+   local i = 1
+
+   --table.foreach(ret,print)
+
+   local cangoup = (bucketno - i) >= 1
+   local cangodown = (bucketno + i) <= self.maxbucket
+   while (cangoup or cangodown) do
+      cangoup = (bucketno - i) >= 1
+      cangodown = (bucketno + i) <= self.maxbucket
+
+      if retn == n then return ret end
+      if cangoup then
+	 local bucket = self.buckets[bucketno - i]
+	 local inorder = bucket.inorder
+	 local bound = math.min(bucket.count, n - retn)
+	 for i=1,bound do table.insert(ret, inorder[i]) end
+	 retn = retn + bound
+      end
+
+      if retn == n then return ret end
+      if cangodown then
+	 local bucket = self.buckets[bucketno + i]
+	 local inorder = bucket.inorder
+	 local bound = math.min(bucket.count, n - retn)
+	 for i=1,bound do table.insert(ret, inorder[i]) end
+	 retn = retn + bound
+      end
+      
+      i = i + 1
+   end
+   
+   return ret
+end
 
 
 function RoutingTable:print()
@@ -131,6 +189,7 @@ function RoutingTable:dryrun()
    --rtid = string.rep("\0", 20)
    --rt = RoutingTable:new(rtid)
    rt = RoutingTable:new("das esch de rap shit")
+   rt = RoutingTable:new(string.rep("\0", 20))
    
    myaddr = "192.168.1.5"
    
@@ -147,6 +206,20 @@ function RoutingTable:dryrun()
    end
    
    rt:print()
+
+   local searchid = string.rep("\8",20)
+   local t1 = ec.time()
+   cl = rt:getclosest(searchid, 20)
+   local t2 = ec.time()
+   print("took: " .. ((t2 - t1)*1000))
+   for i=1,#cl do
+      print(i .. " => " .. ec.tohex(cl[i].id))
+   end
+   print("---")
    
-   --os.exit(0)
+   os.exit(0)
 end
+
+
+--rt = RoutingTable:new(string.rep("\0", 20))
+--rt:dryrun()

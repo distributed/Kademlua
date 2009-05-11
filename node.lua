@@ -6,7 +6,9 @@ function KademluaNode:new(id)
    local id = id or ec.sha1(tostring(math.random()))
    local o = {id = id,
 	      routingtable = RoutingTable:new(id),
-	      rpcdispatch = {["ping"] = self.inping}
+	      rpcdispatch = {["ping"] = self.inping,
+			     ["findnode"] = self.infindnode
+			  }
 	   }
    o.callmanager = CallManager:new(o)
 
@@ -96,6 +98,13 @@ function KademluaNode:inping()
    print("~~~~~~~~~ PONG!")
    
    return 5
+end
+
+function KademluaNode:infindnode(id)
+   if type(id) ~= "string" then return 0 end
+   if #id ~= 20 then return 0 end
+
+   
 end
 
 
