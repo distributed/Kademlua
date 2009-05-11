@@ -1,5 +1,5 @@
--- retrieved from https://svn.neurostechnology.com/hackers/daurnimator/lua/btorrent/libbencode.lua
-on 2009/05/10.
+-- retrieved from https://svn.neurostechnology.com/hackers/daurnimator/lua/btorrent/libbencode.lua 
+-- on 2009/05/10.
 -- added the encoding functions myself.
 
 -- Thanks to prec in #lua for the majority of this.
@@ -45,7 +45,11 @@ local function decode_dict(s, pos)
 	while not s:match("^e", pos) do
 		local k
 		k, pos = decode(s, pos)
-		assert(type(k) == "string")
+		-- i relaxed this a little bit from
+		-- assert(type(k) == "string")
+		-- to
+		local tp = type(k)
+		assert(tp == "string" or tp == "number")
 		d[k], pos = decode(s, pos)
 	end
 	_, pos = assert(s:find("^e", pos))
@@ -137,7 +141,7 @@ function encodelist(what, chunks)
    local insert = table.insert
    insert(chunks, "l")
    for i, v in ipairs(what) do
-      print("inserting into list")
+      --print("inserting into list")
       _encode(v, chunks)
    end
    insert(chunks, "e")
@@ -147,7 +151,7 @@ function encodedict(what, chunks)
    local insert = table.insert
    insert(chunks, "d")
    for key, val in pairs(what) do
-      print("inserting into dict")
+      --print("inserting into dict")
       _encode(key, chunks)
       _encode(val, chunks)
    end
@@ -166,6 +170,6 @@ end
 
 
 debencode = decode
-encode = _encode
+bencode = _encode
 
 print(_encode({"abc", 3, {a=10, b="11"}}))
