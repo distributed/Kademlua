@@ -144,7 +144,8 @@ Channel = {
 
 function Channel:new()
    local o = { sending = Deque:new(),
-	       receiving = Deque:new()
+	       receiving = Deque:new(),
+	       balance = 0 -- #sender - #receiver
 	    }
 
    setmetatable(o,self)
@@ -154,10 +155,17 @@ end
 
 function Channel:send(...)
    --print(args)
-   coroutine.yield("cs", self, arg)
+   self.balance = self.balance + 1
+   coroutine.yield("cs", self, false, arg)
+end
+
+function Channel:sendasync(...)
+   self.balance = self.balance + 1
+   coroutine.yield("cs", self, true, arg)
 end
 
 function Channel:receive()
+   self.balance = self.balance - 1
    ret = {coroutine.yield("cr", self)}
    --table.remove(ret, 1)
    return unpack(ret)
@@ -289,7 +297,8 @@ end
 
 function Scheduler:handlechannelsend(callres)
    local channel = callres[3]
-   local args = callres[4] or {}
+   local async = callres[4]
+   local args = callres[5] or {}
    
    
    if channel.receiving:length() > 0 then
@@ -297,7 +306,10 @@ function Scheduler:handlechannelsend(callres)
       table.insert(self.readyq, {proc=receiver.proc, args=args})
       table.insert(self.readyq, {proc=self.running, args={}})
    else
-      channel.sending:pushright({proc=self.running, args=args})
+      channel.sending:pushright({proc=self.running, args=args, async=async})
+      if async then
+	 table.insert(self.readyq, {proc=self.running, args={}})
+      end
    end
    
 end
@@ -308,7 +320,9 @@ function Scheduler:handlechannelreceive(callres)
    if channel.sending:length() > 0 then
       sender = channel.sending:popleft()
       table.insert(self.readyq, {proc=self.running, args=sender.args})
-      table.insert(self.readyq, {proc=sender.procs, args={}})
+      if not sender.async then
+	 table.insert(self.readyq, {proc=sender.procs, args={}})
+      end
    else
       channel.receiving:pushright({proc=self.running, args=callres})
    end
