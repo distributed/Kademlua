@@ -1,7 +1,8 @@
 
 
 port = tonumber(argv[1]) or 8001
-id = string.sub(string.rep(tostring(port), 20), 1, 20)
+--id = string.sub(string.rep(tostring(port), 20), 1, 20)
+id = ec.sha1(tostring(port))
 
 myaddr = "192.168.1.5"
 
