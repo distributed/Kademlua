@@ -4,6 +4,7 @@
 --timeout = 3600.314159
 timeout = 3.1415
 timeout = 4.1415
+timeout = 0.5
 CallManager = {}
 
 
@@ -67,6 +68,7 @@ function CallManager:incoming(packets)
       if rpcid ~= self.ownid then
 	 --table.foreach(self.running, print)
 	 self.routingtable:seenode(packet.from)
+	 print("ROUTING: seenode " .. packet.from.addr .. ":" .. packet.from.port)
 	 if self.running[rpcid] ~= nil then
 	    local callt = self.running[rpcid]
 

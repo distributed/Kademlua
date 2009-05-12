@@ -120,18 +120,34 @@ function f1()
    --srun(client, "c2")
    --srun(client, "c3")
 
+   io.output():setvbuf("no")
 
    local node = KademluaNode:new(id)
    srun(node.run, node)
    
-   for i, to in ipairs(bootstrap) do
-      srun(node.ping, node, to)
-      srun(node.findnode, node, to, "das esch de rap shit")
-   end
+   --for i, to in ipairs(bootstrap) do
+   --   srun(node.ping, node, to)
+   --   --srun(node.findnode, node, to, "das esch de rap shit")
+   --end
+   srun(node.bootstrap, node, bootstrap)
 
    srun(printn, 3)
-   ssleep(2.0)
-   syield()
+   ssleep(8.0)
+
+   --stdout = io.output()
+   --outfile = io.open("rtable." .. ec.tohex(id), "w")
+   --io.output(outfile)
+   --newout = io.output()
+   --print(stdout, newout)
+   --print("should go to rtable file")
+   --io.write("in rtable")
+   print("===>")
+   node.routingtable:print()
+   print("<===")
+   --io.flush(outfile)
+   --io.output(stdout)
+   --xsio.close(outfile)
+
    local errorfree, ret = scall(f2)
    --srun(client, "c4")
    return "retval f1", ret

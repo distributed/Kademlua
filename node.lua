@@ -87,6 +87,7 @@ function KademluaNode:ping(who)
    print("PING TO " .. who.addr .. ":" .. who.port)  
    table.foreach(rets, print)
    print("----")
+   return unpack(rets)
 end
 
 function KademluaNode:inping(from)
@@ -135,8 +136,9 @@ function KademluaNode:findnode(who, id)
    local errorfree, nodelist = self:sendRPC(who, "findnode", id)
    print("FINDNODE " .. who.addr .. ":" .. who.port .. "  =>  " .. tostring(errorfree))
 
-   if not errorfree then return end
- 
+   if not errorfree then return false end
+
+   retnodelist = {}
    for i, n in ipairs(nodelist) do
       local addr = n[1]
       print("//// " .. addr)
@@ -156,16 +158,35 @@ function KademluaNode:findnode(who, id)
                             unique=unique
                          }
               print(addr .. ":" .. port .. ":" .. ec.tohex(id))
-              self.routingtable:seenode(node)
+              --self.routingtable:seenode(node)
+	      table.insert(retnodelist, node)
            end
         end
       end
    end
    print()
    print()
-   self.routingtable:print()
+   --self.routingtable:print()
    print()
 
+   return true, retnodelist
+end
+
+
+function KademluaNode:bootstrap(bootstrap)
+   local byunique = {}
+   for i, contact in ipairs(bootstrap) do
+      local errorfree, nodelist = self:findnode(contact, self.id)
+      if errorfree then
+	 for j, node in ipairs(nodelist) do
+	    print("BOOTSTRAP: pinging " .. node.addr .. ":" .. node.port)
+	    local errorfree, ret = self:ping(node)
+	    print("BOOTSTRAP: ping res:", errorfree)
+	 end
+      else
+	 print("BOOTSTRAP: ERROR on outer nodelist: " .. contact.addr .. ":" .. contact.port)
+      end
+   end
 end
 
 
