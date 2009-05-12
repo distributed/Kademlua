@@ -178,7 +178,13 @@ function RoutingTable:print()
       local bucket = self.buckets[i]
       print("bucket " .. tostring(i) .. ":")
       for j,node in ipairs(bucket.inorder) do
-	 print(ec.tohex(node.id) .. " | " .. ec.tohex(node.distance))
+	 print(ec.tohex(node.id) .. 
+	    " | " .. 
+	    string.sub(ec.tohex(node.distance), 1, 10) ..
+	    " @ " ..
+	    node.addr ..
+	    ":" ..
+	    node.port)
       end
    end
 end
