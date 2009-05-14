@@ -17,11 +17,17 @@ end
 
 
 function RoutingTable.strcomp(a, b)
+   --print("COMP: in")
    if #a ~= #b then error("strings have to be of the same length", 2) end
    local i = 1
    local len = #a
    while i <= len do
-      if string.byte(a, i) < string.byte(b, i) then return true end
+      --print("COMP: " .. ec.tohex(string.sub(a,i,i)) .. " <? " .. ec.tohex(string.sub(b,i,i)))
+      local ba = string.byte(a, i)
+      local bb = string.byte(b, i)
+      --print("COMP: ", ba, bb)
+      if ba < bb then return true end
+      if ba > bb then return false end
       i = i + 1
    end
    return false
