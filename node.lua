@@ -141,16 +141,16 @@ function KademluaNode:findnode(who, id)
    retnodelist = {}
    for i, n in ipairs(nodelist) do
       local addr = n[1]
-      print("//// " .. addr)
+      --print("//// " .. addr)
       -- TODO: should check for a valid or a kind-of-valid IP
       if type(addr) == "string" then
-        print"addr"
+        --print"addr"
         local port = n[2]
         if type(port) == "number" and port > 0 and port <= 0xffff then
-           print"port"
+           --print"port"
            local id = n[3]
            if type(id) == "string" and #id == 20 then
-              print("id")
+              --print("id")
               local unique = addr .. ":" .. port .. ":" .. id
               local node = {addr=addr,
                             port=port,
@@ -186,6 +186,156 @@ function KademluaNode:bootstrap(bootstrap)
       else
 	 print("BOOTSTRAP: ERROR on outer nodelist: " .. contact.addr .. ":" .. contact.port)
       end
+   end
+end
+
+
+function KademluaNode:iterativefindnode(id, bootstrap)
+   print("NODE: iterativefindnode " .. ec.tohex(id))
+   local inorder = bootstrap or self.routingtable:getclosest(id)
+   local processed = {}
+   local known = {}
+   local myid = self.id
+   for i,v in ipairs(inorder) do
+      v.distance = ec.xor(id, v.id)
+      known[v.unique] = v
+   end
+
+
+   local alpha = 3
+
+   local insert = table.insert
+   local remove = table.remove
+   local sort = table.sort
+   local done = false
+   local numrunning = alpha
+   local order = function(a,b) 
+		    if a == b then 
+		       return false
+		    end
+		    -- kind of DoS protection
+		    if a.distance == b.distance then return true end
+		    --print(a, b)
+		    --print(ec.tohex(a.distance), ec.tohex(b.distance))
+		    --print(a.addr .. ":" .. a.port .. " / " .. b.addr .. ":" .. b.port)
+		    return not RoutingTable.strcomp(a.distance, b.distance) 
+		 end
+
+   print("here it happens")
+   table.sort(inorder, order)
+
+   callnr = 0
+
+   retchannel = Channel:new()
+
+   local function getretval()
+      for i,v in pairs(processed) do
+	 insert(inorder, v)
+      end
+      sort(inorder, order)
+      local len = #inorder
+
+      ret = {}
+      for i=math.max(1,len-20+1),len do
+	 insert(ret, inorder[i])
+      end
+
+      return ret
+   end
+
+
+   local function clerkreturn()
+      print("CLERK: clerkreturn()")
+      numrunning = numrunning - 1
+      if numrunning > 0 then return end
+      local retval = getretval()
+      retchannel:send(retval)
+      done = true
+   end
+   
+
+   local function clerk()
+      callnr = callnr + 1
+      local mycallnr = callnr
+      print("CLERK: waking up, callnr. " .. callnr .. " #inorder " .. #inorder)
+      local contact = remove(inorder)
+      if contact == nil then
+	 clerkreturn()
+	 return
+      end
+      
+      print("CLERK: callnr " .. mycallnr .. " fetched dist " .. ec.tohex(contact.distance))
+
+      processed[contact.unique] = contact
+      if known[contact.unique] == nil then error("contact is not in known table, even though it should be") end
+      local errorfree, closest = self:findnode(contact, id)
+      
+      -- proper tail calls FTW
+      if not errorfree then clerk() end
+
+      print("CLERK: min before: " .. ec.tohex(inorder[#inorder].distance))
+      print("CLERK: #closest " .. #closest)
+      local inserted = 0
+      for i,v in ipairs(closest) do
+	 if known[v.unique] == nil then
+	    v.distance = ec.xor(id, v.id)
+	    print("CLERK:       " .. ec.tohex(v.distance))
+	    insert(inorder, v)
+	    known[v.unique] = v
+	    inserted = inserted + 1
+	 end
+      end
+
+      if inserted == 0 then
+	 clerkreturn()
+	 return
+      end
+
+      sort(inorder, order)
+      print("CLERK: min after:  " .. ec.tohex(inorder[#inorder].distance))
+
+      local len = #inorder
+
+      if len == 0 then 
+	 clerkreturn() 
+	 return
+      end
+
+      local lower = math.max(1,len-20+1)
+      local newlen = len - lower + 1
+      print("CLERK: lew, lower, newlen " .. len, lower, newlen, contact.addr .. ":" .. contact.port)
+      local newinorder = {}
+      for i=lower,len do
+	 insert(newinorder, inorder[i])
+      end
+
+
+      --local oldmindist = inorder[len].distance
+      local oldmindist = contact.distance
+      local newmindist = inorder[len].distance
+      print("CLERK: newmin, oldmin: " .. ec.tohex(newmindist) .. " .. " .. ec.tohex(oldmindist))
+      if not RoutingTable.strcomp(newmindist, oldmindist) then
+	 print("CLERK: it's not getting better...")
+	 clerkreturn()
+	 return
+      end
+
+      inorder = newinorder
+
+      -- proper tail calls FTW!
+      clerk()
+   end
+
+   
+   for i=1,alpha do
+      srun(clerk)
+   end
+   
+   local retval = retchannel:receive()
+   print("NODE: received on retchannel, len " .. #retval)
+   for i,v in ipairs(retval) do
+      print("NODE: " .. i .. ": " .. ec.tohex(v.distance))
+      --table.foreach(v, print)
    end
 end
 

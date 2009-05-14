@@ -129,7 +129,14 @@ function f1()
    --   srun(node.ping, node, to)
    --   --srun(node.findnode, node, to, "das esch de rap shit")
    --end
-   srun(node.bootstrap, node, bootstrap)
+
+   -- as there is no mechanism (yet?) to tell when the call manager is ready
+   for i=1,10 do syield() end
+
+   node:bootstrap(bootstrap)
+   --srun(node.bootstrap, node, bootstrap)
+   srun(node.iterativefindnode, node, ec.sha1("das esch de rap shit"))
+
 
    srun(printn, 3)
    ssleep(8.0)
