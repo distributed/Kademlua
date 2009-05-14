@@ -300,7 +300,7 @@ function Scheduler:handlechannelsend(callres)
    local async = callres[4]
    local args = callres[5] or {}
    
-   
+
    if channel.receiving:length() > 0 then
       receiver = channel.receiving:popleft()
       table.insert(self.readyq, {proc=receiver.proc, args=args})
@@ -316,12 +316,12 @@ end
 
 function Scheduler:handlechannelreceive(callres)
    local channel = callres[3]
-   
+
    if channel.sending:length() > 0 then
       sender = channel.sending:popleft()
       table.insert(self.readyq, {proc=self.running, args=sender.args})
       if not sender.async then
-	 table.insert(self.readyq, {proc=sender.procs, args={}})
+	 table.insert(self.readyq, {proc=sender.proc, args={}})
       end
    else
       channel.receiving:pushright({proc=self.running, args=callres})
@@ -339,6 +339,7 @@ function Scheduler:handlereq(callres)
       proc = self.procs[pid]
    else
       proc = self.names[nameorpid]
+      print("SCHEDULER: could not find pid '" .. nameorpid .. "'") 
       if proc == nil then
 	 table.insert(self.readyq, {proc=self.running, args={false}})
 	 return
