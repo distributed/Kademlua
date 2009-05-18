@@ -1,4 +1,6 @@
 
+-- node.lua
+-- (C) 2009, Michael Meier
 
 KademluaNode = {}
 

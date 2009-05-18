@@ -1,4 +1,6 @@
 
+-- params.lua
+-- (C) 2009, Michael Meier
 
 port = tonumber(argv[1]) or 8001
 --id = string.sub(string.rep(tostring(port), 20), 1, 20)

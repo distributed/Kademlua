@@ -22,6 +22,13 @@
 #include <sys/errno.h>
 
 
+
+/* kademlua.c 
+ * (C) 2009, Michael Meier
+ */
+
+
+
 #define DEFAULT_PORT 8000
 #define HASH_SECT u_int32_t
 

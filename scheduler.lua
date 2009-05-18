@@ -1,4 +1,6 @@
 
+-- scheduler.lua
+-- (C) 2009, Michael Meier
 
 -- functions for coroutines being scheduled by Scheduler
 function syield()

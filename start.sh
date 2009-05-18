@@ -1,5 +1,8 @@
 #!/bin/bash
 
+# start.sh
+# (C) 2009, Michael Meier
+
 nums="1 2 3 4"
 
 

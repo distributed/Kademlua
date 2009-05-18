@@ -1,3 +1,7 @@
+
+-- protocol.lua
+-- (C) 2009, Michael Meier
+
 rpcidlength = 8
 
 -- packet table -> binary string

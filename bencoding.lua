@@ -1,6 +1,8 @@
 -- retrieved from https://svn.neurostechnology.com/hackers/daurnimator/lua/btorrent/libbencode.lua 
 -- on 2009/05/10.
--- added the encoding functions myself.
+
+-- Michael Meier, 2009
+-- added the encoding functions myself, fixed decode_list and decode_dict()
 
 -- Thanks to prec in #lua for the majority of this.
 

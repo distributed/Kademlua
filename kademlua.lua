@@ -5,6 +5,10 @@ require("node")
 require("routing")
 require("bencoding")
 
+
+-- kademlua.lua
+-- (C) 2009, Michael Meier
+
 math.randomseed(ec.time())
 
 

@@ -1,5 +1,6 @@
 
-
+-- call.lua
+-- (C) 2009 Michael Meier
 
 --timeout = 3600.314159
 timeout = 3.1415
