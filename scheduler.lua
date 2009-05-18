@@ -339,13 +339,13 @@ function Scheduler:handlereq(callres)
       proc = self.procs[pid]
    else
       proc = self.names[nameorpid]
-      print("SCHEDULER: could not find pid '" .. nameorpid .. "'") 
       if proc == nil then
+	 print("SCHEDULER: could not find pid '" .. nameorpid .. "'") 
 	 table.insert(self.readyq, {proc=self.running, args={false}})
 	 return
       end
       pid = proc.pid
-      print(proc,pid)
+      --print(proc,pid)
    end
    
    if proc.waitingforreq then
@@ -372,7 +372,7 @@ end
 function Scheduler:handleresp(callres)
    local to = callres[3]
    local resp = callres[4]
-   print("type of resp: " .. type(resp))
+   --print("type of resp: " .. type(resp))
    if not (to and resp) then
       print("BAD resp CALL, here it goes:")
       print("to:")
