@@ -4,7 +4,7 @@ nums="1 2 3 4"
 
 
 min=8003
-max=8052
+max=8102
 # glorious mac os x does not offer a seq command, so here we go...
 counter=$min
 while [ $counter -le $max ]; do
@@ -31,6 +31,7 @@ cleanup() {
 for n in $sn; do
     ./kademlua $n > log/$n &
     #sleep 1$n &
+    sleep 0.1
     echo started kademlua with port number $n
     npid=$!
     pids="$pids $npid"
