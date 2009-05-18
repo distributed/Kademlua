@@ -64,8 +64,8 @@ function KademluaNode:incomingRPC(packet)
 		      call=129,
 		      payload=ret
 		   }
-   table.foreach(retpacket, print)
-   print("ret")
+   --table.foreach(retpacket, print)
+   --print("ret")
    return {retpacket}
 end
 
@@ -92,7 +92,7 @@ end
 
 function KademluaNode:inping(from)
 
-   print("INPING")
+   --print("INPING")
    
 
    
@@ -102,7 +102,7 @@ function KademluaNode:inping(from)
 --		    to=packet.from}
    --local rraw = encodepacket(outpack)
    --outpack.raw = rraw
-   print("~~~~~~~~~ PONG!")
+   --print("~~~~~~~~~ PONG!")
    
    return 5
 end
@@ -116,7 +116,7 @@ end
 
 
 function KademluaNode:infindnode(from, id)
-   print("infnindnode", id)
+   --print("infindnode", id)
    if type(id) ~= "string" then return 0 end
    if #id ~= 20 then return 0 end
 
