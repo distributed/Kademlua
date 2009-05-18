@@ -532,12 +532,12 @@ static int getbucketno(lua_State* L) {
     }
   }
 
-  //lua_pushnumber(L, 0.0);
-  //return 1;
+  lua_pushnumber(L, 161);
+  return 1;
 
-  // the error will be in your face
-  lua_pushstring(L, "no bit set to one found");
-  lua_error(L);
+  // the error will not be in your face
+  //lua_pushstring(L, "no bit set to one found");
+  //lua_error(L);
   return 0;
 
 }
