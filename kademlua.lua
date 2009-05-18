@@ -133,10 +133,17 @@ function f1()
    -- as there is no mechanism (yet?) to tell when the call manager is ready
    for i=1,10 do syield() end
 
+   -- sleep to wait for all nodes to come up
+   ssleep(3.0)
+
    node:bootstrap(bootstrap)
    --srun(node.bootstrap, node, bootstrap)
-   srun(node.iterativefindnode, node, ec.sha1("das esch de rap shit"))
-
+   errorfree, neighbours = scall(node.iterativefindnode, node, ec.sha1(tostring(port)))
+   if errorfree then
+      for i,neighbour in ipairs(neighbours) do
+	 node:ping(neighbour)
+      end
+   end
 
    srun(printn, 3)
    ssleep(8.0)

@@ -37,8 +37,8 @@ function KademluaNode:sendRPC(whom, name, ...)
       rep.payload = {}
    end
 
-   print("reply from callmanager")
-   table.foreach(rep,print)
+   --print("reply from callmanager")
+   --table.foreach(rep,print)
    
    return rep.reply, unpack(rep.payload)
 end
@@ -85,8 +85,8 @@ function KademluaNode:ping(who)
    --rets = {sreq("callmanager", packet)}
    rets = {self:sendRPC(who, "ping")}
    print("PING TO " .. who.addr .. ":" .. who.port)  
-   table.foreach(rets, print)
-   print("----")
+   --table.foreach(rets, print)
+   --print("----")
    return unpack(rets)
 end
 
@@ -197,10 +197,12 @@ function KademluaNode:iterativefindnode(id, bootstrap)
    local known = {}
    local myid = self.id
    for i,v in ipairs(inorder) do
-      v.distance = ec.xor(id, v.id)
-      known[v.unique] = v
+      -- anti loopback
+      if id ~= v.id then
+	 v.distance = ec.xor(id, v.id)
+	 known[v.unique] = v
+      end
    end
-
 
    local alpha = 3
 
@@ -221,7 +223,6 @@ function KademluaNode:iterativefindnode(id, bootstrap)
 		    return not RoutingTable.strcomp(a.distance, b.distance) 
 		 end
 
-   print("here it happens")
    table.sort(inorder, order)
 
    callnr = 0
@@ -337,6 +338,8 @@ function KademluaNode:iterativefindnode(id, bootstrap)
       print("NODE: " .. i .. ": " .. ec.tohex(v.distance))
       --table.foreach(v, print)
    end
+
+   return retval
 end
 
 
