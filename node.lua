@@ -24,6 +24,14 @@ function KademluaNode:sendRPC(whom, name, ...)
 
    if type(name) ~= "string" then error("name needs to be a string", 2) end
 
+
+   local arg = arg
+   arg.n = nil
+
+   print("SENDRPC: arg", arg)
+   for name, val in pairs(arg) do print("SENDRPC:", name, val) end
+
+
    local packet = {to=whom,
 		   fromid=self.id,
 		   call=1, -- standard
@@ -276,7 +284,9 @@ function KademluaNode:iterativefindnode(id, bootstrap)
       -- proper tail calls FTW
       if not errorfree then clerk() end
 
-      print("CLERK: min before: " .. ec.tohex(inorder[#inorder].distance))
+      pcall(function() 
+	       print("CLERK: min before: " .. ec.tohex(inorder[#inorder].distance)) 
+	 end)
       print("CLERK: #closest " .. #closest)
       local inserted = 0
       for i,v in ipairs(closest) do
