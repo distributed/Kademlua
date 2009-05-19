@@ -185,18 +185,30 @@ end
 
 function KademluaNode:bootstrap(bootstrap)
    local byunique = {}
+   local findnodebootstrap = {}
    for i, contact in ipairs(bootstrap) do
       local errorfree, nodelist = self:findnode(contact, self.id)
       if errorfree then
-	 for j, node in ipairs(nodelist) do
-	    print("BOOTSTRAP: pinging " .. node.addr .. ":" .. node.port)
-	    local errorfree, ret = self:ping(node)
-	    print("BOOTSTRAP: ping res:", errorfree)
-	 end
+	 for i,v in ipairs(nodelist) do table.insert(findnodebootstrap, v) end
+	 --for j, node in ipairs(nodelist) do
+	 --   print("BOOTSTRAP: pinging " .. node.addr .. ":" .. node.port)
+	 --   local errorfree, ret = self:ping(node)
+	 --   print("BOOTSTRAP: ping res:", errorfree)
+	 --end
       else
 	 print("BOOTSTRAP: ERROR on outer nodelist: " .. contact.addr .. ":" .. contact.port)
       end
    end
+
+
+
+   local neighbours, processed = self:iterativefindnode(self.id, findnodebootstrap)
+   for i,neigh in ipairs(neighbours) do
+      if processed[neigh.unique] == nil then
+	 self:ping(neigh)
+      end
+   end
+   
 end
 
 
@@ -351,7 +363,7 @@ function KademluaNode:iterativefindnode(id, bootstrap)
       --table.foreach(v, print)
    end
 
-   return retval
+   return retval, processed
 end
 
 

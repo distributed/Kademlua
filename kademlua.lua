@@ -142,12 +142,12 @@ function f1()
 
    node:bootstrap(bootstrap)
    --srun(node.bootstrap, node, bootstrap)
-   errorfree, neighbours = scall(node.iterativefindnode, node, ec.sha1(tostring(port)))
-   if errorfree then
-      for i,neighbour in ipairs(neighbours) do
-	 node:ping(neighbour)
-      end
-   end
+   --errorfree, neighbours = scall(node.iterativefindnode, node, ec.sha1(tostring(port)))
+   --if errorfree then
+   --   for i,neighbour in ipairs(neighbours) do
+--	 node:ping(neighbour)
+--      end
+--   end
 
    srun(printn, 3)
    ssleep(8.0)
