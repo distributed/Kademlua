@@ -30,6 +30,7 @@ cleanup() {
     exit 0
 }
 
+trap cleanup SIGINT SIGTERM
 
 for n in $sn; do
     ./kademlua $n > log/$n &
@@ -40,7 +41,6 @@ for n in $sn; do
     pids="$pids $npid"
 done
 
-trap cleanup SIGINT SIGTERM
 
 sleep 0.2
 for port in $sn; do
