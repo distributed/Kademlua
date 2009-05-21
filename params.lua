@@ -7,9 +7,9 @@ if argv[1] then
    if file then
       file = nil
       dofile(argv[1])
+   else
+      port = tonumber(argv[1]) or 8001
    end
-else
-   port = tonumber(argv[1]) or 8001
 end
 
 port = port or 8001
@@ -22,3 +22,4 @@ myaddr = myaddr or "127.0.0.1"
 bootstrap = bootstrap or {{addr=myaddr, port=8001},
 			  {addr=myaddr, port=8002}}
 
+print("PARAMS: port " .. port .. " myaddr " .. myaddr)
