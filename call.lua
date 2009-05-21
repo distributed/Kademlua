@@ -86,7 +86,9 @@ function CallManager:incoming(packets)
 		     -- we initiated that call
 		     print("CALL: incoming response, rpc id " .. ec.tohex(rpcid))
 		     self.running[rpcid] = nil
-		     sresp(callt.proc, {reply=true, payload=packet.payload})
+		     sresp(callt.proc, {reply=true, 
+					payload=packet.payload,
+				        from=from})
 		     --table.insert(self.scheduler.readyq, {proc=callt.proc, args={}})
 		  else
 		     print ("CALL: callers ID does not match")
