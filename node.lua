@@ -50,7 +50,7 @@ function KademluaNode:sendRPC(whom, name, ...)
    --print("reply from callmanager")
    --table.foreach(rep,print)
    
-   return rep.reply, unpack(rep.payload)
+   return rep.reply, rep.from, unpack(rep.payload)
 end
 
 function KademluaNode:incomingRPC(packet)
@@ -143,7 +143,7 @@ end
 
 function KademluaNode:findnode(who, id)
 
-   local errorfree, nodelist = self:sendRPC(who, "findnode", id)
+   local errorfree, from, nodelist = self:sendRPC(who, "findnode", id)
    print("FINDNODE " .. who.addr .. ":" .. who.port .. "  =>  " .. tostring(errorfree))
 
    if not errorfree then return false end
