@@ -146,7 +146,7 @@ function KademluaNode:findnode(who, id)
    local errorfree, from, nodelist = self:sendRPC(who, "findnode", id)
    print("FINDNODE " .. who.addr .. ":" .. who.port .. "  =>  " .. tostring(errorfree))
 
-   if not errorfree then return false end
+   if not errorfree then return false, from end
 
    retnodelist = {}
    for i, n in ipairs(nodelist) do
@@ -179,7 +179,7 @@ function KademluaNode:findnode(who, id)
    --self.routingtable:print()
    print()
 
-   return true, retnodelist
+   return true, from, retnodelist
 end
 
 
@@ -187,7 +187,7 @@ function KademluaNode:bootstrap(bootstrap)
    local byunique = {}
    local findnodebootstrap = {}
    for i, contact in ipairs(bootstrap) do
-      local errorfree, nodelist = self:findnode(contact, self.id)
+      local errorfree, from, nodelist = self:findnode(contact, self.id)
       if errorfree then
 	 for i,v in ipairs(nodelist) do table.insert(findnodebootstrap, v) end
 	 --for j, node in ipairs(nodelist) do
@@ -213,10 +213,24 @@ end
 
 
 function KademluaNode:iterativefindnode(id, bootstrap)
-   print("NODE: iterativefindnode " .. ec.tohex(id))
+   return self:iterativefind(id, "findnode", 65535, bootstrap)
+end
+
+
+function KademluaNode:iterativefind(id, rpc, numret, bootstrap)
+   print("NODE: iterativefind " .. ec.tohex(id))
+
+   local rpc = rpc or "findnode"
+   local numret = numret or 3
+   local findnode = (rpc == "findnode")
+
    local inorder = bootstrap or self.routingtable:getclosest(id)
+
+
    local processed = {}
    local known = {}
+   local retsgot = 0
+   local rets = {n=0}
    local myid = self.id
    for i,v in ipairs(inorder) do
       -- anti loopback
@@ -271,8 +285,14 @@ function KademluaNode:iterativefindnode(id, bootstrap)
       print("CLERK: clerkreturn()")
       numrunning = numrunning - 1
       if numrunning > 0 then return end
-      local retval = getretval()
-      retchannel:send(retval)
+
+      if findnode then
+	 local retval = getretval()
+	 retchannel:send(retval)
+      else
+	 retchannel:send(rets)
+      end
+
       done = true
    end
    
@@ -281,6 +301,13 @@ function KademluaNode:iterativefindnode(id, bootstrap)
       callnr = callnr + 1
       local mycallnr = callnr
       print("CLERK: waking up, callnr. " .. callnr .. " #inorder " .. #inorder)
+
+      -- we already have enough answers
+      if not findnode and rets.n >= numret then
+	 clerkreturn()
+	 return
+      end
+
       local contact = remove(inorder)
       if contact == nil then
 	 clerkreturn()
@@ -291,10 +318,28 @@ function KademluaNode:iterativefindnode(id, bootstrap)
 
       processed[contact.unique] = contact
       if known[contact.unique] == nil then error("contact is not in known table, even though it should be") end
-      local errorfree, closest = self:findnode(contact, id)
+      --local errorfree, closest = self:findnode(contact, id)
+      local errorfree, from, closest = self[rpc](self, contact, id)
       
       -- proper tail calls FTW
       if not errorfree then return clerk() end
+
+      -- are we looking for a return value and is the respondent not just
+      -- returning a list of nodes?
+      if not findnode and closest.retval then 
+	 local retval = closest.retval
+	 
+	 if rets.n < numret then
+	    insert(rets, retval)
+	    rets.n = rets.n + 1
+	    if rets.n == numret then
+	       clerkreturn()
+	       return
+	    end
+	 end
+
+	 --return clerk()
+      end
 
       pcall(function() 
 	       print("CLERK: min before: " .. ec.tohex(inorder[#inorder].distance)) 
@@ -359,7 +404,11 @@ function KademluaNode:iterativefindnode(id, bootstrap)
    local retval = retchannel:receive()
    print("NODE: received on retchannel, len " .. #retval)
    for i,v in ipairs(retval) do
-      print("NODE: " .. i .. ": " .. ec.tohex(v.distance))
+      if findnode then
+	 print("NODE: " .. i .. ": " .. ec.tohex(v.distance))
+      else
+	 print("NODE: " .. i)
+      end
       --table.foreach(v, print)
    end
 
