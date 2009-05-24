@@ -247,9 +247,9 @@ function KademluaNode:iterativefindnode(id, bootstrap)
 
    table.sort(inorder, order)
 
-   callnr = 0
-
-   retchannel = Channel:new()
+   local callnr = 0
+ 
+   local retchannel = Channel:new()
 
    local function getretval()
       for i,v in pairs(processed) do
