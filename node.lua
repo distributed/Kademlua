@@ -294,7 +294,7 @@ function KademluaNode:iterativefindnode(id, bootstrap)
       local errorfree, closest = self:findnode(contact, id)
       
       -- proper tail calls FTW
-      if not errorfree then clerk() end
+      if not errorfree then return clerk() end
 
       pcall(function() 
 	       print("CLERK: min before: " .. ec.tohex(inorder[#inorder].distance)) 
@@ -348,7 +348,7 @@ function KademluaNode:iterativefindnode(id, bootstrap)
       inorder = newinorder
 
       -- proper tail calls FTW!
-      clerk()
+      return clerk()
    end
 
    
