@@ -28,8 +28,8 @@ function KademluaNode:sendRPC(whom, name, ...)
    local arg = arg
    arg.n = nil
 
-   print("SENDRPC: arg", arg)
-   for name, val in pairs(arg) do print("SENDRPC:", name, val) end
+   --print("SENDRPC: arg", arg)
+   --for name, val in pairs(arg) do print("SENDRPC:", name, val) end
 
 
    local packet = {to=whom,
