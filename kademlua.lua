@@ -150,6 +150,12 @@ function f1()
 --	 node:ping(neighbour)
 --      end
 --   end
+   ssleep(0.5)
+
+   node:iterativestore(ec.sha1("das"), "esch de rap shit")
+   local ret = node:iterativefindvalue(ec.sha1("das"))
+   print("ITERATIVEFINDVALUE: done")
+   table.foreach(ret, function(index, what) if type(what) == "table" then print(what.from.addr .. ":" .. what.from.port .. ": " .. tostring(what.retval)) end end)
 
    srun(printn, 3)
    ssleep(8.0)
