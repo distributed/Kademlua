@@ -337,25 +337,37 @@ function KademluaNode:iterativefind(id, rpc, numret, bootstrap)
       processed[contact.unique] = contact
       if known[contact.unique] == nil then error("contact is not in known table, even though it should be") end
       --local errorfree, closest = self:findnode(contact, id)
+
       local errorfree, from, closest = self[rpc](self, contact, id)
-      
+      print("CLERK: RPC " .. rpc .. " => " .. tostring(errorfree))
       -- proper tail calls FTW
       if not errorfree then return clerk() end
+      if type(closest) ~= "table" then 
+	 print("CLERK: did not get a table")
+	 return clerk()
+      end
 
       -- are we looking for a return value and is the respondent not just
       -- returning a list of nodes?
-      if not findnode and closest.retval then 
-	 local retval = closest.retval
-	 
-	 if rets.n < numret then
-	    insert(rets, retval)
-	    rets.n = rets.n + 1
-	    if rets.n == numret then
-	       clerkreturn()
-	       return
+      if not findnode then
+	 print("CLERK: not findnode")
+	 if closest.retval then 
+	    local retval = closest.retval
+	    print("CLERK: got retval: " .. tostring(retval))
+	    
+	    if rets.n < numret then
+	       rets[from.unique] = {retval=retval, from=from}
+	       rets.n = rets.n + 1
+	       if rets.n == numret then
+		  clerkreturn()
+		  return
+	       end
 	    end
 	 end
 
+	 -- as it may be nested
+	 closest = closest.closest
+	 if type(closest) ~= "table" then return clerk() end
 	 --return clerk()
       end
 
@@ -425,7 +437,7 @@ function KademluaNode:iterativefind(id, rpc, numret, bootstrap)
       if findnode then
 	 print("NODE: " .. i .. ": " .. ec.tohex(v.distance))
       else
-	 print("NODE: " .. i)
+	 print("NODE: " .. i .. " returned " .. tostring(v))
       end
       --table.foreach(v, print)
    end
