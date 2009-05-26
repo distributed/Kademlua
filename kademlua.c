@@ -386,6 +386,7 @@ static int tohex(lua_State *L) {
   }
 
   lua_pushlstring(L, outbuf, len*2);
+  free(outbuf);
   return 1;
 
 }
@@ -446,6 +447,7 @@ static int fromhex(lua_State *L) {
   }
 
   lua_pushlstring(L, (char *) outbuf, (len/2) + (len % 2));
+  free(outbuf);
   return 1;
 
 }
@@ -504,6 +506,7 @@ static int xor(lua_State *L) {
 
 
   lua_pushlstring(L, (char*) outbuf, len1);
+  free(outbuf);
   return 1;
 
 }
