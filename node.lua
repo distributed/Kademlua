@@ -188,17 +188,19 @@ end
 
 
 function KademluaNode:bootstrap(bootstrap)
+   -- ask the bootstrap nodes for nodes close to us
    local byunique = {}
    local findnodebootstrap = {}
    for i, contact in ipairs(bootstrap) do
       local errorfree, from, nodelist = self:findnode(contact, self.id)
       if errorfree then
-	 for i,v in ipairs(nodelist) do table.insert(findnodebootstrap, v) end
-	 --for j, node in ipairs(nodelist) do
-	 --   print("BOOTSTRAP: pinging " .. node.addr .. ":" .. node.port)
-	 --   local errorfree, ret = self:ping(node)
-	 --   print("BOOTSTRAP: ping res:", errorfree)
-	 --end
+	 for i,v in ipairs(nodelist) do 
+	    -- maintain set property of findnodebootstrap
+	    if byunique[v.unique] == nil then
+	       table.insert(findnodebootstrap, v) 
+	       byunique[v.unique] = v
+	    end
+	 end
       else
 	 print("BOOTSTRAP: ERROR on outer nodelist: " .. contact.addr .. ":" .. contact.port)
       end
@@ -206,10 +208,22 @@ function KademluaNode:bootstrap(bootstrap)
 
 
 
+   -- ping all closest nodes not previously contacted
    local neighbours, processed = self:iterativefindnode(self.id, findnodebootstrap)
    for i,neigh in ipairs(neighbours) do
       if processed[neigh.unique] == nil then
 	 self:ping(neigh)
+      end
+   end
+
+   --balance the routing a table a little bit by looking for ids far away
+   local onemask = string.rep("\255", 20)
+   local oppositeid = ec.xor(onemask, self.id)
+   local faraway, processed = self:iterativefindnode(oppositeid)
+   for i=1,math.min(#faraway,5) do
+      local mom = faraway[i]
+      if not processed[mom.unique] then
+	 self:ping(mom)
       end
    end
    
