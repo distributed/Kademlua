@@ -36,6 +36,16 @@ function RoutingTable.strcomp(a, b)
 end
 
 
+function RoutingTable.copynode(node)
+   return {addr=node.addr,
+	   port=node.port,
+	   id=node.id,
+	   unique=node.unique,
+	   distance=node.distance
+	  }
+end
+
+
 function RoutingTable:getpos(node)
    local bucketno = math.min(ec.getbucketno(node.distance), self.maxbucket)
 
@@ -135,16 +145,22 @@ end
 
 
 function RoutingTable:getclosest(id, n)
+   -- this function does not return contacts directly, but instead
+   -- shallow copies them so as to prevent accidentally tampering with
+   -- them by, say, changing the distance
+
    local n = n or 20
    local distance = ec.xor(self.id, id)
 
    local bucketno = math.min(ec.getbucketno(distance), self.maxbucket)
 
+   local copynode = RoutingTable.copynode
+
    local ret = {}
    local basebucket = self.buckets[bucketno]
    local inorder = basebucket.inorder
    local bound = math.min(n, basebucket.count)
-   for i=1,bound do table.insert(ret, inorder[i]) end
+   for i=1,bound do table.insert(ret, copynode(inorder[i])) end
    local retn = bound
    local i = 1
 
@@ -161,7 +177,7 @@ function RoutingTable:getclosest(id, n)
 	 local bucket = self.buckets[bucketno - i]
 	 local inorder = bucket.inorder
 	 local bound = math.min(bucket.count, n - retn)
-	 for i=1,bound do table.insert(ret, inorder[i]) end
+	 for i=1,bound do table.insert(ret, copynode(inorder[i])) end
 	 retn = retn + bound
       end
 
@@ -170,7 +186,7 @@ function RoutingTable:getclosest(id, n)
 	 local bucket = self.buckets[bucketno + i]
 	 local inorder = bucket.inorder
 	 local bound = math.min(bucket.count, n - retn)
-	 for i=1,bound do table.insert(ret, inorder[i]) end
+	 for i=1,bound do table.insert(ret, copynode(inorder[i])) end
 	 retn = retn + bound
       end
       
