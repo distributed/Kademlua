@@ -9,8 +9,11 @@ function KademluaNode:new(id)
    local o = {id = id,
 	      routingtable = RoutingTable:new(id),
 	      rpcdispatch = {["ping"] = self.inping,
-			     ["findnode"] = self.infindnode
-			  }
+			     ["findnode"] = self.infindnode,
+			     ["store"] = self.instore,
+			     ["findvalue"] = self.infindvalue
+			    },
+	      datastore = {} -- prototype
 	   }
    o.callmanager = CallManager:new(o)
 
@@ -184,6 +187,67 @@ function KademluaNode:findnode(who, id)
    print()
 
    return true, from, retnodelist
+end
+
+
+function KademluaNode:instore(from, id, data)
+   if type(id) ~= "string" then return 0 end
+   if #id ~= 20 then return 0 end
+
+   self.datastore[id] = data
+   return 1
+end
+
+
+function KademluaNode:store(where, id, what)
+   return self:sendRPC(where, "store", id, what)
+end
+
+
+function KademluaNode:iterativestore(id, what)
+   local nodelist = self:iterativefindnode(id)
+   for i, node in ipairs(nodelist) do
+      local errorfree, ret = self:store(node, id, what)
+      print("STORE: on " .. node.addr .. ":" .. node.port .. " => " .. tostring(errorfree))
+   end
+end
+
+
+function KademluaNode:infindvalue(from, id)
+   print("INFINDVALUE: in")
+   if type(id) ~= "string" then return {} end
+   if #id ~= 20 then return {} end
+   print("INFINDVALUE: not rejected")
+   local ret = {}
+   local val = self.datastore[id]
+   if val ~= nil then
+      ret.retval = val
+   end
+   
+   ret.closest = {}
+   local fromid = from.id
+   local strcomp = RoutingTable.strcomp
+   local insert = table.insert
+   local ownid = self.id
+   local dist = ec.xor(id, ownid)
+   for i, node in ipairs(self.routingtable:getclosest(id)) do
+      if strcomp(ec.xor(ownid, node.id), dist) then
+	 insert(ret.closest, node)
+      end
+   end
+
+   return ret
+end
+
+
+function KademluaNode:findvalue(who, id)
+   return self:sendRPC(who, "findvalue", id)
+end
+
+
+function KademluaNode:iterativefindvalue(id, max)
+   local max = max or 3
+   return self:iterativefind(id, "findvalue", 3)
 end
 
 
