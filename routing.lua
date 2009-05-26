@@ -114,7 +114,7 @@ function RoutingTable:seenode(node)
    local distance = ec.xor(self.id, nodeid)
 
    -- copy node info
-   node = {addr=node.addr, 
+   local node = {addr=node.addr, 
 	   port=node.port, 
 	   id=node.id,
 	   unique=node.unique,
@@ -124,7 +124,7 @@ function RoutingTable:seenode(node)
    if bucketno then
       -- move to tail of LRS queue
       -- node = self:removenodeatpos(node, bucketno, i)
-      node = self:removenodeatpos(bucketno, i)
+      local node = self:removenodeatpos(bucketno, i)
       self:insertnodeinbucket(node, bucketno)
    else
       -- insert a new node
