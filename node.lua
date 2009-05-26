@@ -124,13 +124,7 @@ end
 --   
 --end
 
-
-function KademluaNode:infindnode(from, id)
-   --print("infindnode", id)
-   if type(id) ~= "string" then return 0 end
-   if #id ~= 20 then return 0 end
-
-   local ret = {}
+function KademluaNode:attachfindnode(from, id, ret)
    local insert = table.insert
    local entries = self.routingtable:getclosest(id)
    local fromid = from.id
@@ -139,6 +133,16 @@ function KademluaNode:infindnode(from, id)
    end
    
    return ret
+end
+
+
+function KademluaNode:infindnode(from, id)
+   --print("infindnode", id)
+   if type(id) ~= "string" then return 0 end
+   if #id ~= 20 then return 0 end
+
+   local ret = {}
+   return self:attachfindnode(from, id, ret)
 end
 
 function KademluaNode:findnode(who, id)
