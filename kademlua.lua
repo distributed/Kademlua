@@ -126,6 +126,8 @@ function f1()
 
    io.output():setvbuf("no")
 
+   print("id: " .. ec.tohex(id))
+
    local node = KademluaNode:new(id)
    srun(node.run, node)
    
