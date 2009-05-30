@@ -311,7 +311,8 @@ static int getevent(lua_State *L) {
       lua_pushstring(L, "errormessage");
       lua_pushstring(L, strerror(errno));
       lua_settable(L, -3);
-      
+
+      return 1;
     }
     buf[bytesread] = 0;
     if (bytesread == 0) 
