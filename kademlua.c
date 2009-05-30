@@ -297,6 +297,22 @@ static int getevent(lua_State *L) {
   if (FD_ISSET(0, &rset)) {
     char buf[1024];
     int bytesread = read(0, buf, 1023);
+    if (bytesread == -1) {
+      lua_newtable(L);
+
+      lua_pushstring(L, "type");
+      lua_pushstring(L, "stdin");
+      lua_settable(L, -3);
+
+      lua_pushstring(L, "errno");
+      lua_pushnumber(L, (double) errno);
+      lua_settable(L, -3);
+
+      lua_pushstring(L, "errormessage");
+      lua_pushstring(L, strerror(errno));
+      lua_settable(L, -3);
+      
+    }
     buf[bytesread] = 0;
     if (bytesread == 0) 
       readfromstdin = 0;
