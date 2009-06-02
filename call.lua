@@ -16,7 +16,8 @@ function CallManager:new(node)
 	      scheduler = scheduler,
 	      node = node,
 	      ownid = node.id,
-	      routingtable = node.routingtable
+	      routingtable = node.routingtable,
+	      livelinessmanager = LivelinessManager:new(node)
 	  }
    if o.ownid == nil then error("need an ID",2) end
    if type(o.routingtable) ~= "table" then error("need a routing table in the node") end
@@ -33,6 +34,9 @@ function CallManager:timeoutf(rpcid, howsoon)
       print("CALL TIMED OUT")
       runningt = self.running[rpcid]
       self.running[rpcid] = nil
+
+      self.livelinessmanager:timeout(runningt.packet.to, rpcid)
+
       sresp(runningt.proc, {reply=false})
       --table.insert(self.scheduler.readyq, {proc=runningt.proc, args={false}})
    else
@@ -85,6 +89,7 @@ function CallManager:incoming(packets)
 		  if (to.id == nil) or (from.id == to.id) then
 		     -- we initiated that call
 		     print("CALL: incoming response, rpc id " .. ec.tohex(rpcid))
+		     self.livelinessmanager:incomm(packet.from, rpcid)
 		     self.running[rpcid] = nil
 		     sresp(callt.proc, {reply=true, 
 					payload=packet.payload,
@@ -155,6 +160,7 @@ function CallManager:outgoing(proc, packet)
 
    spacket(packet)
    srun(self.timeoutf, self, rpcid, timeout)
+   self.livelinessmanager:outcomm(packet.to, rpcid)
 
 end
 

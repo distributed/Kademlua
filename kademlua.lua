@@ -4,6 +4,7 @@ require("call")
 require("node")
 require("routing")
 require("bencoding")
+require("liveliness")
 
 
 -- kademlua.lua
