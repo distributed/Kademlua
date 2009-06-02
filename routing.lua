@@ -231,7 +231,7 @@ function RoutingTable:dryrun()
    end
    
    for i, node in ipairs(nodes) do
-      node.unique=node.addr .. ":" .. tostring(node.port) .. ":" .. node.id
+      node.unique=node.addr .. "|" .. tostring(node.port) .. "|" .. node.id
       rt:seenode(node)
    end
    

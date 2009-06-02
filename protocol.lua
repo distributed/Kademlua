@@ -79,7 +79,7 @@ function decodepacket(packet)
       call = string.byte(call)
       
       packet.from.id = fromid
-      packet.from.unique = packet.from.addr .. ":" .. packet.from.port .. ":" .. fromid
+      packet.from.unique = packet.from.addr .. "|" .. packet.from.port .. "|" .. fromid
       packet.rpcid = rpcid
       packet.call = call
       if packet.call == 1 or packet.call == 129 then

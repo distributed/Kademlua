@@ -168,13 +168,13 @@ function KademluaNode:findnode(who, id)
            local id = n[3]
            if type(id) == "string" and #id == 20 then
               --print("id")
-              local unique = addr .. ":" .. port .. ":" .. id
+              local unique = addr .. "|" .. port .. "|" .. id
               local node = {addr=addr,
                             port=port,
                             id=id,
                             unique=unique
                          }
-              print(addr .. ":" .. port .. ":" .. ec.tohex(id))
+              print(addr .. "|" .. port .. "|" .. ec.tohex(id))
               --self.routingtable:seenode(node)
 	      table.insert(retnodelist, node)
            end
