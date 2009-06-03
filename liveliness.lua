@@ -11,6 +11,10 @@
 --
 
 
+-- the current handling of active probes is very shake and probably a
+-- source of many funny and interesting race conditions. you have been
+-- warned.
+
 
 LivelinessManager = {}
 
@@ -19,7 +23,8 @@ function LivelinessManager:new(node)
    local o = {
       byunique = {},
       bysocket = {},
-      node = node
+      node = node,
+      maxretry = 3
 	  }
 
    if node == nil then error("LivelinessManager needs a node") end
@@ -63,14 +68,81 @@ function LivelinessManager:newwatchdog(contact)
 
    local socket = contact.addr .. "|" .. tostring(contact.port)
 
+   local rpcsrunning = {}
+   local waitingclients = {}
+   local numwaitingclients = 0
+   local probing = false
+   local probingstep = 0
+
+   local lastin = 0
+   local stopprobing = false
+
    local function updatecontact(newcontact)
       if not contact.unique and newcontact.unique then
 	 contact.unique = newcontact.unique
       end
    end
+   
+
+   local function probebackoff(step)
+      local base = timeout * (2 ^ step)
+      local jitter = (math.random() * base) / 2
+      
+      return base + jitter
+   end
+
+
+   local function probe()
+      probingstep = 0
+      probing = true
+
+      local lastinatstart = lastin
+      
+      print("LIVELINESS: starting probe for " .. socket)
+
+      while probingstep < self.maxretry do
+	 if stopprobing then 
+	    stopprobing = false
+	    probing = false
+	    return 
+	 end
+
+	 print("LIVELINESS: probing step " .. probingstep .. " @ " .. socket)
+	 local errorfree = self.node:ping(contact)
+
+	 if stopprobing then 
+	    probing = false
+	    stopprobing = false
+	    return
+	 end
+	 
+	 if errorfree then 
+	    print("LIVELINESS: probing step " .. tonumber(probingstep) .. " @ " .. socket .. " OK")
+	    probing = false
+	    eventpipe:send("probereply", contact)
+	    probing = false
+	    stopprobing = false
+	    return
+	 else
+	    probingstep = probingstep + 1
+	    local oldlastin = lastin
+	    eventpipe:send("probetimeout", contact, probingstep)
+	    print("LIVELINESS: probing step " .. tonumber(probingstep - 1) .. " @ " .. socket .. " TIMEOUT")
+	    ssleep(probebackoff(probingstep))
+
+	    if lastin > oldlastin then
+	       probing = false
+	       stopprobing = false
+	       return
+	    end
+	 end
+      end
+      
+      probing = false
+      stopprobing = false
+   end
 
    local function watchdog()
-      local lastin = 0
 
       print("LIVELINESS: starting watchdog for " .. socket)
 
@@ -82,12 +154,30 @@ function LivelinessManager:newwatchdog(contact)
 	 if msg == "out" then
 	    print("LIVELINESS: outgoing packet to " .. socket .. " >")
 	    updatecontact(contact)
+
+	    rpcsrunning[rpcid] = {rpcid=rpcid,
+				  when=now}
 	 elseif msg == "in" then
 	    updatecontact(contact)
 	    print("LIVELINESS: updating lastin of " .. socket .. " <")
 	    lastin = now
+	    rpcsrunning[rpcid] = nil
+
+	    stopprobing = true
+
+	    -- notify all the waiting clients that the contact is alive
+	    for name, val in pairs(waitingclients) do
+	       val.retpipe:send(true)
+	    end
+	    waitingclients = {}
+	    numwaitingclients = 0
+
 	 elseif msg == "timeout" then
 	    -- timeout should not yield information about unique
+	    local runningt = rpcsrunning[rpcid]
+	    if not runningt then print("LIVELINESS: WARNING: timeout with no corresponding entry in rpcsrunning") end
+	    rpcsrunning[rpcid] = nil
+
 	 elseif msg == "isweak" then
 	    local args = rpcid
 	    local timediff = args.timediff
@@ -98,6 +188,32 @@ function LivelinessManager:newwatchdog(contact)
 	    else
 	       retpipe:sendasync(false)
 	    end
+
+	 elseif msg == "isstrong" then
+	    local args = rpcid
+	    numwaitingclients = numwaitingclients + 1
+	    waitingclients[args] = args
+	    
+	    local func, v, p = pairs(rpcsrunning)
+	    local firstname, firstval = func(v,p)
+
+	    if not probing then
+	       stopprobing = false
+	       srun(probe)
+	    end
+
+	 elseif msg == "probetimeout" then
+	    local stepattimeout = rpcid
+	    
+	    if stepattimeout >= self.maxretry then
+	       for name, clientt in pairs(waitingclients) do
+		  clientt.retpipe:send(false)
+	       end
+
+	       waitingclients = {}
+	       numwaitingclients = 0
+	    end
+	    
 	 elseif msg == "die" then
 	    return
 	 end
@@ -159,8 +275,18 @@ function LivelinessManager:isweaklyalive(contact, timeframe)
       local args = {timediff=timeframe,
 		    retpipe=Channel:new()}
       watchdog.eventpipe:sendasync("isweak", contact, args)
-      return retpipe:receive()
+      return args.retpipe:receive()
    else
       return false
    end
+end
+
+
+
+function LivelinessManager:isstronglyalive(contact)
+   local watchdog = self:findwatchdog(contact) or self:newwatchdog(contact)
+
+   local args = {retpipe=Channel:new()}
+   watchdog.eventpipe:sendasync("isstrong", contact, args)
+   return args.retpipe:receive()
 end
