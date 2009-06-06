@@ -69,6 +69,79 @@ function RoutingTable.copynode(node)
 end
 
 
+function RoutingTable:bucketwatchdog(bucket, eventpipe)
+   
+   local nodequeue = bucket.nodequeue
+   local k = RoutingTable.k
+   
+   local maxage = 10
+
+
+   while true do
+      local cmd, node = eventpipe:receive()
+
+      print("ROUTING: bucketwatchdog: " .. cmd)
+
+      if cmd == "free" then
+	 print("ROUTING: bucketwatchdog: bucket.count", bucket.count)
+      end
+
+      if cmd == "new" or cmd == "free" then
+	 -- get some node
+	 local func, tab, par = pairs(nodequeue)
+	 local unique, node = func(tab, par)
+
+
+	 if node then
+	    -- delete the node from the table
+	    nodequeue[unique] = nil
+	    
+	    -- if we have some node to insert
+	    if bucket.count < k then
+	       print("ROUTING: bucketwatchdog: fits in: " .. node.addr .. "|" .. tostring(node.port))
+	       -- and there is free space in the bucket
+	       local bucketno = self:getpos(node)
+	       if not bucketno then
+		  -- and the node does not yet exist in the routing
+		  -- table... insert it
+		  self:newnode(node)
+		  nodequeue[node.unique] = nil
+	       end
+
+	    else
+	       -- and there is no free space in the routing table
+	       print("self", self)
+	       table.foreach(self, print)
+	       print("self.node", self.node)
+	       print("self.node.callmanager", self.node.callmanager)
+	       local livelinessmanager = self.node.callmanager.livelinessmanager
+
+	       -- get the least recently seen node
+	       local lrsnode = bucket.inorder[1]
+	       -- check if it has been active in the last maxage
+	       -- seconds
+	       if not livelinessmanager:isweaklyalive(lrsnode, maxage) then
+		  -- if not: check if it responds
+		  livelinessmanager:isstronglyalive(lrsnode)
+		  -- when the node is not alive we will be called back
+		  -- via our eventpipe
+		  
+		  -- at the moment incoming "new" nodes are not
+		  -- cached, thus i reinsert the new node after the
+		  -- "free" message of the livelinessmanager
+		  nodequeue[node.unique] = node
+		  scall(function()
+			   eventpipe:sendasync("new", node)
+			end)
+	       end
+	    end
+	 end
+      end
+   end
+
+end
+
+
 function RoutingTable:getpos(node)
    local bucketno = math.min(ec.getbucketno(node.distance), self.maxbucket)
 
@@ -130,7 +203,14 @@ function RoutingTable:newnode(node)
 	 self:newnode(node)
       else
 	 -- maybe replace an old node
-	 print("PROBING LEAST RECENTLY SEEN NODE IN BUCKET " .. tostring(bucketno))
+	 --print("PROBING LEAST RECENTLY SEEN NODE IN BUCKET " .. tostring(bucketno))
+	 print("ROUTING: new? bucketno " .. bucketno .. " on pipe " .. tostring(bucket.eventpipe))
+	 local eventpipe = bucket.eventpipe
+	 if eventpipe.balance < maxeventpipelen then
+	    print("ROUTING: new to watchdog for " .. node.addr .. "|" .. tostring(node.port))
+	    bucket.nodequeue[node.unique] = node
+	    eventpipe:sendasync("new", node)
+	 end
       end
    end
 end
