@@ -170,7 +170,7 @@ function LivelinessManager:newwatchdog(contact)
 
 	    -- notify all the waiting clients that the contact is alive
 	    for name, val in pairs(waitingclients) do
-	       val.retpipe:send(true)
+	       val.retpipe:sendasync(true, contact)
 	    end
 	    waitingclients = {}
 	    numwaitingclients = 0
@@ -187,9 +187,9 @@ function LivelinessManager:newwatchdog(contact)
 	    local retpipe = args.retpipe
 
 	    if (now - timediff) <= lastin then
-	       retpipe:sendasync(true)
+	       retpipe:sendasync(true, contact)
 	    else
-	       retpipe:sendasync(false)
+	       retpipe:sendasync(false, contact)
 	    end
 
 	 elseif msg == "isstrong" then
@@ -211,7 +211,7 @@ function LivelinessManager:newwatchdog(contact)
 	    
 	    if stepattimeout >= self.maxretry then
 	       for name, clientt in pairs(waitingclients) do
-		  clientt.retpipe:send(false)
+		  clientt.retpipe:sendasync(false, contact)
 	       end
 
 	       waitingclients = {}
