@@ -159,6 +159,10 @@ function f1()
    table.foreach(ret, function(index, what) if type(what) == "table" then print(what.from.addr .. ":" .. what.from.port .. ": " .. tostring(what.retval)) end end)
 
    srun(printn, 3)
+
+   print("KADEMLUA: " .. tostring(node.callmanager.livelinessmanager:isstronglyalive({addr="127.0.0.1", port=8001})))
+
+
    ssleep(8.0)
 
    --stdout = io.output()
