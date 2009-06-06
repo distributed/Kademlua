@@ -292,5 +292,15 @@ function LivelinessManager:isstronglyalive(contact)
 
    local args = {retpipe=Channel:new()}
    watchdog.eventpipe:sendasync("isstrong", contact, args)
-   return args.retpipe:receive()
+   local retvals = {args.retpipe:receive()}
+
+   local up = retvals[1]
+   local contact = retvals[2]
+
+   if retvals[1] == false then
+      local routingtable = self.node.routingtable
+      routingtable:nodedown(contact)
+   end
+   
+   return unpack(retvals)
 end
