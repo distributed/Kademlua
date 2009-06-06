@@ -216,6 +216,30 @@ function RoutingTable:newnode(node)
 end
 
 
+function RoutingTable:nodedown(node)
+   local node = RoutingTable.copynode(node)
+
+
+   if not node.id then 
+      -- contact is not complete so we don't know what to remove
+      return
+   end
+
+   print("XOR")
+   local distance = ec.xor(self.id, node.id)
+   print("done")
+   node.distance = distance
+
+   local bucketno, i = self:getpos(node)
+   if bucketno then
+      -- if the node exists in our table, remove it
+      self:removenodeatpos(bucketno, i)
+      -- notify the watchdog
+      self.buckets[bucketno].eventpipe:sendasync("free")
+   end
+end
+
+
 function RoutingTable:seenode(node)
 
    local unique = node.unique
