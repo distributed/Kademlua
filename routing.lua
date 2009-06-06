@@ -2,18 +2,25 @@
 -- routing.lua
 -- (C) 2009, Michael Meier
 
-RoutingTable = {}
+local maxeventpipelen = 100
 
-function RoutingTable:new(id)
+
+RoutingTable = {k=20}
+
+function RoutingTable:new(id, node)
    local o = {id=id,
-	      buckets={{byunique={}, inorder={}, count=0}},
+	      node=node,
 	      nodes={},
-	      maxbucket=1,
-	      k=20
+	      maxbucket=1
 	   }
-   
+
    setmetatable(o,self)
    self.__index = self
+
+   o.buckets= {o:newbucket()}
+
+   if o.node == nil then error("RoutingTable needs a node") end
+
    return o
 end
 
@@ -33,6 +40,22 @@ function RoutingTable.strcomp(a, b)
       i = i + 1
    end
    return false
+end
+
+
+function RoutingTable:newbucket()
+
+   local eventpipe = Channel:new()
+   local bucket = {byunique={}, 
+		   inorder={}, 
+		   count=0,
+		   eventpipe=eventpipe,
+		   nodequeue={}
+		  }
+
+   srun(RoutingTable.bucketwatchdog, self, bucket, eventpipe)
+
+   return bucket
 end
 
 
@@ -92,7 +115,7 @@ function RoutingTable:newnode(node)
 	 -- split the bucket
 	 self.maxbucket = self.maxbucket + 1
 	 local oldbucket = self.buckets[self.maxbucket - 1]
-	 local newbucket = {byunique={}, inorder={}, count=0}
+	 local newbucket = self:newbucket()
 	 self.buckets[self.maxbucket] = newbucket
 	 
 	 local nodecache={}

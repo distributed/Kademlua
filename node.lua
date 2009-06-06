@@ -7,7 +7,6 @@ KademluaNode = {}
 function KademluaNode:new(id)
    local id = id or ec.sha1(tostring(math.random()))
    local o = {id = id,
-	      routingtable = RoutingTable:new(id),
 	      rpcdispatch = {["ping"] = self.inping,
 			     ["findnode"] = self.infindnode,
 			     ["store"] = self.instore,
@@ -15,8 +14,9 @@ function KademluaNode:new(id)
 			    },
 	      datastore = {} -- prototype
 	   }
-   o.callmanager = CallManager:new(o)
 
+   o.routingtable = RoutingTable:new(id, o)
+   o.callmanager = CallManager:new(o)
 
    setmetatable(o,self)
    self.__index = self
