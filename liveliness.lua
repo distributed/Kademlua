@@ -75,7 +75,10 @@ function LivelinessManager:newwatchdog(contact)
    local probingstep = 0
 
    local lastin = 0
+   -- serves as a stop signal to probe(). probe() does however not
+   -- stop if there are still clients waiting for their answers
    local stopprobing = false
+
 
    local function updatecontact(newcontact)
       if not contact.unique and newcontact.unique then
@@ -101,7 +104,7 @@ function LivelinessManager:newwatchdog(contact)
       print("LIVELINESS: starting probe for " .. socket)
 
       while probingstep < self.maxretry do
-	 if stopprobing then 
+	 if stopprobing and numwaitingclients == 0 then 
 	    stopprobing = false
 	    probing = false
 	    return 
@@ -110,7 +113,7 @@ function LivelinessManager:newwatchdog(contact)
 	 print("LIVELINESS: probing step " .. probingstep .. " @ " .. socket)
 	 local errorfree = self.node:ping(contact)
 
-	 if stopprobing then 
+	 if stopprobing and numwaitingclients == 0 then 
 	    probing = false
 	    stopprobing = false
 	    return
@@ -130,11 +133,11 @@ function LivelinessManager:newwatchdog(contact)
 	    print("LIVELINESS: probing step " .. tonumber(probingstep - 1) .. " @ " .. socket .. " TIMEOUT")
 	    ssleep(probebackoff(probingstep))
 
-	    if lastin > oldlastin then
-	       probing = false
-	       stopprobing = false
-	       return
-	    end
+	    --if lastin > oldlastin then
+	    --   probing = false
+	    --   stopprobing = false
+	    --   return
+	    --end
 	 end
       end
       
@@ -197,8 +200,9 @@ function LivelinessManager:newwatchdog(contact)
 	    local func, v, p = pairs(rpcsrunning)
 	    local firstname, firstval = func(v,p)
 
+	    stopprobing = false
+
 	    if not probing then
-	       stopprobing = false
 	       srun(probe)
 	    end
 
