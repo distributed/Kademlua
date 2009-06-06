@@ -150,18 +150,18 @@ function LivelinessManager:newwatchdog(contact)
       print("LIVELINESS: starting watchdog for " .. socket)
 
       while true do
-	 local msg, contact, rpcid = eventpipe:receive()
+	 local msg, rcontact, rpcid = eventpipe:receive()
 	 
 	 local now = ec.time()
 
 	 if msg == "out" then
 	    print("LIVELINESS: outgoing packet to " .. socket .. " >")
-	    updatecontact(contact)
+	    updatecontact(rcontact)
 
 	    rpcsrunning[rpcid] = {rpcid=rpcid,
 				  when=now}
 	 elseif msg == "in" then
-	    updatecontact(contact)
+	    updatecontact(rcontact)
 	    print("LIVELINESS: updating lastin of " .. socket .. " <")
 	    lastin = now
 	    rpcsrunning[rpcid] = nil
