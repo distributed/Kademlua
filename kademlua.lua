@@ -5,6 +5,7 @@ require("node")
 require("routing")
 require("bencoding")
 require("liveliness")
+require("datastore")
 
 
 -- kademlua.lua
