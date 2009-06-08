@@ -241,8 +241,9 @@ function KademluaNode:infindvalue(from, id)
    local ownid = self.id
    local dist = ec.xor(id, ownid)
    for i, node in ipairs(self.routingtable:getclosest(id)) do
-      if strcomp(ec.xor(ownid, node.id), dist) then
-	 insert(ret.closest, node)
+      -- if we know nodes closer to the key than we are, return them also
+      if strcomp(ec.xor(node.id, ownid), dist) then
+	 insert(ret.closest, {node.addr, node.port, node.id})
       end
    end
 
