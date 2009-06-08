@@ -148,6 +148,40 @@ function KademluaNode:infindnode(from, id)
    return self:attachfindnode(from, id, ret)
 end
 
+
+function KademluaNode:filternodelist(nodelist)
+   local retnodelist = {}
+   local insert = table.insert
+   
+   for i, n in ipairs(nodelist) do
+      local addr = n[1]
+      --print("//// " .. addr)
+      -- TODO: should check for a valid or a kind-of-valid IP
+      if type(addr) == "string" then
+	 --print"addr"
+	 local port = n[2]
+	 if type(port) == "number" and port > 0 and port <= 0xffff then
+	    --print"port"
+	    local id = n[3]
+	    if type(id) == "string" and #id == 20 then
+	       --print("id")
+	       local unique = addr .. "|" .. port .. "|" .. id
+	       local node = {addr=addr,
+			     port=port,
+			     id=id,
+			     unique=unique
+			  }
+	       print(addr .. "|" .. port .. "|" .. ec.tohex(id))
+	       --self.routingtable:seenode(node)
+	       insert(retnodelist, node)
+	    end
+	 end
+      end
+   end
+
+   return retnodelist
+end
+
 function KademluaNode:findnode(who, id)
 
    local errorfree, from, nodelist = self:sendRPC(who, "findnode", id)
@@ -155,32 +189,8 @@ function KademluaNode:findnode(who, id)
 
    if not errorfree then return false, from end
 
-   retnodelist = {}
-   for i, n in ipairs(nodelist) do
-      local addr = n[1]
-      --print("//// " .. addr)
-      -- TODO: should check for a valid or a kind-of-valid IP
-      if type(addr) == "string" then
-        --print"addr"
-        local port = n[2]
-        if type(port) == "number" and port > 0 and port <= 0xffff then
-           --print"port"
-           local id = n[3]
-           if type(id) == "string" and #id == 20 then
-              --print("id")
-              local unique = addr .. "|" .. port .. "|" .. id
-              local node = {addr=addr,
-                            port=port,
-                            id=id,
-                            unique=unique
-                         }
-              print(addr .. "|" .. port .. "|" .. ec.tohex(id))
-              --self.routingtable:seenode(node)
-	      table.insert(retnodelist, node)
-           end
-        end
-      end
-   end
+   local retnodelist = self:filternodelist(nodelist)
+
    print()
    print()
    --self.routingtable:print()
@@ -430,8 +440,8 @@ function KademluaNode:iterativefind(id, rpc, numret, bootstrap)
 	 end
 
 	 -- as it may be nested
-	 closest = closest.closest
 	 if type(closest) ~= "table" then return clerk() end
+	 closest = self:filternodelist(closest.closest)
 	 --return clerk()
       end
 
