@@ -2,7 +2,10 @@
 -- routing.lua
 -- (C) 2009, Michael Meier
 
+-- maximum length of eventpipe (when written to by seenode)
 local maxeventpipelen = 100
+-- how soon a bucketwatchdog starts a probe again
+local probebackoff = 5.0 
 
 
 RoutingTable = {k=20}
@@ -76,6 +79,7 @@ function RoutingTable:bucketwatchdog(bucket, eventpipe)
    
    local maxage = 10
 
+   local lastprobetime = 0
 
    while true do
       local cmd, node = eventpipe:receive()
@@ -110,19 +114,20 @@ function RoutingTable:bucketwatchdog(bucket, eventpipe)
 
 	    else
 	       -- and there is no free space in the routing table
-	       print("self", self)
-	       table.foreach(self, print)
-	       print("self.node", self.node)
-	       print("self.node.callmanager", self.node.callmanager)
 	       local livelinessmanager = self.node.callmanager.livelinessmanager
 
+	       local now = ec.time()
+	       
 	       -- get the least recently seen node
 	       local lrsnode = bucket.inorder[1]
 	       -- check if it has been active in the last maxage
 	       -- seconds
-	       if not livelinessmanager:isweaklyalive(lrsnode, maxage) then
+	       if (now - lastprobetime) > probebackoff and 
+	          not livelinessmanager:isweaklyalive(lrsnode, maxage) then
+		  
 		  -- if not: check if it responds
 		  livelinessmanager:isstronglyalive(lrsnode)
+		  lastprobetime = now
 		  -- when the node is not alive we will be called back
 		  -- via our eventpipe
 		  
