@@ -18,7 +18,7 @@ math.randomseed(ec.time())
 
 --print("s1:", s1.readyq)
 
-
+print("estate:", estate)
 print("hash of 'kademlua':", ec.tohex(ec.sha1("kademlua")))
 print("with fromhex:", ec.tohex(ec.fromhex(ec.tohex(ec.sha1("kademlua")))))
 
@@ -212,7 +212,7 @@ end
 --bm()
 
 --node = KademluaNode:new(id)
-s1 = Scheduler:new()
+s1 = Scheduler:new(estate)
 s1:runf(f1, "arg1", "and arg 2")
 
 -- wait for all coroutines to finish

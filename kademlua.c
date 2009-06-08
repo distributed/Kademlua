@@ -33,11 +33,22 @@
 #define HASH_SECT u_int32_t
 
 
-lua_State *mstate;
+struct eventstate {
+  lua_State *mstate;
+  int sock;
+  u_int16_t port;
+  struct sockaddr_in mysockaddr;
+  int readfromstdin;
+};
+
+
+
+/*lua_State *mstate;
 int sock;
 int port;
 struct sockaddr_in mysockaddr;
 int readfromstdin;
+*/
 
 void notdecoded(lua_State *L) {
 
@@ -47,10 +58,13 @@ void notdecoded(lua_State *L) {
 
 }
 
-static int recvpacket(lua_State *L) {
+static int recvpacket(lua_State *L, struct eventstate *estate) {
 
+  // TODO: better setting and handling of buffer size in recvfrom
   char sbuf[16384];
   //printf("socket ready to read\n");
+
+  int sock = estate->sock;
 
   struct sockaddr_in from;
 
@@ -179,6 +193,17 @@ static int recvpacket(lua_State *L) {
 
 static int getevent(lua_State *L) {
 
+  if (!lua_isuserdata(L, 1))
+    return 0;
+
+  struct eventstate *estate = lua_touserdata(L, 1);
+
+  /* because i remove the userdata element from the stack i certainly
+     do not have to change the code below. it's even not that bad as
+     there will only few arguments to getevent(), e.g. 1 or 2.*/
+  lua_remove(L, 1);
+
+
   int nargs = lua_gettop(L);
 
   double dtimeout;
@@ -254,10 +279,10 @@ static int getevent(lua_State *L) {
       if (!(lua_isnil(L, -1))) {
 	size_t len;
 	const char *raw = lua_tolstring(L, -1, &len);
-	sendres = sendto(sock, raw, len, 0, 
+	sendres = sendto(estate->sock, raw, len, 0, 
 			 (struct sockaddr*) &addr, sizeof(addr));
       } else {
-	sendres = sendto(sock, "yeehaw!", 7, 0, 
+	sendres = sendto(estate->sock, "yeehaw!", 7, 0, 
 			 (struct sockaddr*) &addr, sizeof(addr));
       }
       lua_pop(L, 1);
@@ -285,14 +310,14 @@ static int getevent(lua_State *L) {
 
   fd_set rset;
   FD_ZERO(&rset);
-  if (readfromstdin)
+  if (estate->readfromstdin)
     FD_SET(0,    &rset);
-  FD_SET(sock, &rset);
+  FD_SET(estate->sock, &rset);
 
 
   // determining max fd = argh! i hate apple for not being able to produce
   // a poll() which works on a terminal.
-  select(sock + 1, &rset, NULL, NULL, timeout_ptr);
+  select(estate->sock + 1, &rset, NULL, NULL, timeout_ptr);
 
   if (FD_ISSET(0, &rset)) {
     char buf[1024];
@@ -316,7 +341,7 @@ static int getevent(lua_State *L) {
     }
     buf[bytesread] = 0;
     if (bytesread == 0) 
-      readfromstdin = 0;
+      estate->readfromstdin = 0;
     //printf("read: %s", buf);    
    
     //lua_pushstring(mstate, buf);
@@ -333,9 +358,9 @@ static int getevent(lua_State *L) {
     return 1;
   }
 
-  if (FD_ISSET(sock, &rset)) {
+  if (FD_ISSET(estate->sock, &rset)) {
 
-    return recvpacket(L);
+    return recvpacket(L, estate);
   }
 
 
@@ -598,19 +623,25 @@ static const struct luaL_reg eclib[] = {
 
 
 
+struct eventstate* init(int argc, char **argv) {
 
-
-int main(int argc, char **argv) {
-
-  readfromstdin = 1;
-  port = DEFAULT_PORT;
-
-  mstate = lua_open();
+  lua_State *mstate = lua_open();
+  if (!mstate)
+    return NULL;
   luaL_openlibs(mstate);
   luaL_openlib(mstate, "ec", eclib, 0);
+  // clear stack after openlib pushed the ec lib
+  lua_settop(mstate, 0);
 
+  struct eventstate *estate = lua_newuserdata(mstate, sizeof(struct eventstate));
+  if (!estate)
+    return NULL;
 
-  if ((sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
+  estate->mstate = mstate;
+  estate->readfromstdin = 1;
+  estate->port = DEFAULT_PORT;
+
+  if ((estate->sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
     perror("kademlua: socket");
     exit(1);
   }
@@ -619,7 +650,7 @@ int main(int argc, char **argv) {
   {
     int res;
     int on = 1;
-    if ((res = setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on))) == -1) {
+    if ((res = setsockopt(estate->sock, SOL_SOCKET, SO_REUSEADDR, &on, sizeof(on))) == -1) {
       perror("kademlua: setsockopt");
       exit(1);
     }
@@ -650,47 +681,69 @@ int main(int argc, char **argv) {
     exit(1);
   }
   
-  port = (int) lua_tonumber(mstate, -1);
-
-  lua_settop(mstate, 0);
+  estate->port = (u_int16_t) lua_tonumber(mstate, -1);
+  
+  // only preserve the new userdata for estate
+  lua_settop(mstate, 1);
   
 
 
   {
     int res;
-    mysockaddr.sin_family = AF_INET;
-    mysockaddr.sin_addr.s_addr = INADDR_ANY;
+    estate->mysockaddr.sin_family = AF_INET;
+    estate->mysockaddr.sin_addr.s_addr = INADDR_ANY;
     
     // TODO: move somewhere else
     //mysockaddr.sin_addr.s_addr = inet_addr("192.168.1.5");
     
 
-    mysockaddr.sin_port = htons(port);
-    if ((res = bind(sock, (struct sockaddr*) &mysockaddr, sizeof(mysockaddr))) == -1) {
+    estate->mysockaddr.sin_port = htons(estate->port);
+    if ((res = bind(estate->sock, 
+		    (struct sockaddr*) &(estate->mysockaddr), 
+		    sizeof(estate->mysockaddr))) == -1) {
       perror("kademlua: bind");
       exit(1);
     }
 
-    socklen_t len = sizeof(mysockaddr);
-    res = getsockname(sock, (struct sockaddr*) &mysockaddr, &len);
+    socklen_t len = sizeof(estate->mysockaddr);
+    res = getsockname(estate->sock, 
+		      (struct sockaddr*) &(estate->mysockaddr), 
+		      &len);
     if (res == -1) {
       perror("kademlua: getsockname");
     }
     char ascaddr[32];
-    inet_ntop(AF_INET, &(mysockaddr.sin_addr), ascaddr, 32);
-    printf("bound to %s:%i\n", ascaddr, ntohs(mysockaddr.sin_port));
+    inet_ntop(AF_INET, &(estate->mysockaddr.sin_addr), ascaddr, 32);
+    printf("bound to %s:%i\n", ascaddr, ntohs(estate->mysockaddr.sin_port));
   }
 
+  return estate;
+
+}
+
+
+int main(int argc, char **argv) {
+
+
+  struct eventstate *estate = init(argc, argv);
+  if (!estate) {
+    printf("init failed\n");
+    exit(1);
+  }
   /*getchar();*/
 
+  /* init pushed the estate userdata on the stack, push it into the
+     lua namespace */
+  lua_setglobal(estate->mstate, "estate");
+
   {
-    int res = luaL_loadfile(mstate, "kademlua.lua");
+    int res = luaL_loadfile(estate->mstate, "kademlua.lua");
     if (res != 0) {
       printf("error loading kademlua.lua\n");
       exit(1);
     }
 
-    lua_call(mstate, 0, 0);
+    lua_call(estate->mstate, 0, 0);
   }
 
   return 0;

@@ -182,7 +182,7 @@ Scheduler = {
 
 
 
-function Scheduler:new(node)
+function Scheduler:new(estate)
    local o ={ readyq = {},
 	      sleeping = {},
 	      packetq = {},
@@ -190,9 +190,11 @@ function Scheduler:new(node)
 	      numrunning = 0,
 	      procs = {},
 	      names={},
-	      node=node
+	      estate=estate
 	   }
    --o.callmanager= CallManager:new(o, node)
+
+   if not estate then error("Scheduler: need to have an event state") end
 
    setmetatable(o,self)
    self.__index = self
@@ -526,7 +528,7 @@ function Scheduler:run()
 	 --	    {to={addr="78.46.82.237", port=6002}, raw=rawpack}}
 	 --	    --{to={addr="78.46.82.237", port=32769}, raw="rap shit"}}
       --print("ec.getevent, timeout " .. timeout .. " & handlepacketproc " .. tostring(self.handlepacketproc))
-	 retval = ec.getevent(timeout, self.packetq)
+	 retval = ec.getevent(self.estate, timeout, self.packetq)
 	 self.packetq = {}
 	 if retval ~= nil and retval.type == "sock" then
 	    --decodepacket(retval)
