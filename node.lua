@@ -490,6 +490,15 @@ function KademluaNode:iterativefind(id, rpc, numret, bootstrap)
       local newmindist = inorder[len].distance
       print("CLERK: newmin, oldmin: " .. ec.tohex(newmindist) .. " .. " .. ec.tohex(oldmindist))
       if not RoutingTable.strcomp(newmindist, oldmindist) then
+	 -- TODO: this is probably a bit too much GDR style for
+	 -- findvalue: "Vorwärts immer, rückwärts nimmer!". if
+	 -- findvalue starts with nodes very close to the "target" and
+	 -- these nodes do not have the requested value, nothing is
+	 -- returned. there has to be a strategy if a value is missing
+	 -- in the closest nodes, either here or with a more
+	 -- persistent iterativefindvalue implementation which may use
+	 -- the original iterativefindvalue and the inorder dict
+	 -- returned by it.
 	 print("CLERK: it's not getting better...")
 	 clerkreturn()
 	 return
@@ -517,7 +526,7 @@ function KademluaNode:iterativefind(id, rpc, numret, bootstrap)
       --table.foreach(v, print)
    end
 
-   return retval, processed
+   return retval, processed, inorder
 end
 
 
