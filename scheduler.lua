@@ -71,6 +71,24 @@ function sresp(to, resp)
 end
 
 
+function sregisterforevent(eventname)
+   print(type(eventname))
+   if not type(eventame) == "string" then error("sregisterforevent: eventname has to be a string", 2) end
+   return coroutine.yield("rfe", eventname)
+end
+
+
+function sunregisterfromevent(eventname)
+   if not type(eventame) == "string" then error("sunregisterfromevent: eventname has to be a string", 2) end
+   return couroutine.yield("urfe", eventname)
+end
+
+
+function swaitforevent(eventname)
+   if not type(eventame) == "string" then error("swaitforevent: eventname has to be a string", 2) end
+   return coroutine.yield("wfe", eventname)
+end
+
 
 function runcall(packet)
    errorfree, retpack = scall(handlecall, packet)
@@ -190,7 +208,8 @@ function Scheduler:new(estate)
 	      numrunning = 0,
 	      procs = {},
 	      names={},
-	      estate=estate
+	      estate=estate,
+	      eventhandlers={}
 	   }
    --o.callmanager= CallManager:new(o, node)
 
@@ -213,7 +232,10 @@ function Scheduler:new(estate)
 		     wreq = self.handlewreq,
 		     resp = self.handleresp,
 		     reg = self.handlereg,
-		     gp = self.handlegetpackets
+		     gp = self.handlegetpackets,
+		     rfe = self.handleregisterforevent,
+		     urfe = self.handleunregisterfromevent,
+		     wfe = self.handlewaitforevent
 		  }
 		     
    o.dispatch = dispatch
@@ -404,6 +426,61 @@ function Scheduler:handlegetpackets(callres)
    self.waitingforpacketproc = self.running
 end
 
+
+function Scheduler:handleregisterforevent(callres)
+   -- TODO: register which events a certain process is waiting for and
+   -- unregistering the events if the process dies
+   local eventname = callres[3]
+   local eventhandler = self.eventhandlers[eventanme]
+   if eventhandler then
+      self:makeready(self.running, {false})
+   else
+      self.eventhandlers[eventname] = {proc=self.running,
+				       eventq=Deque:new(),
+				       waiting=false}
+      self:makeready(self.running, {true})
+   end
+end
+
+
+function Scheduler:handleunregisterfromevent(callres)
+   local eventname = callres[3]
+   self.eventhandlers[eventname] = nil
+   self:makeready(self.running, {true})
+end
+
+
+function Scheduler:handlewaitforevent(callres)
+   local eventname = callres[3]
+   local eventhandler = self.eventhandlers[eventname]
+   if eventhandler.proc ~= self.running then 
+      self:makeready(self.running, {false, "wrong process waiting"})
+      return
+   end
+   
+   local eventq = eventhandler.eventq
+   if eventq:length() > 0 then
+      local event = eventq:popleft()
+      self:makeready(self.running, {event})
+   else
+      -- process will be woken up when
+      eventhandler.waiting = true
+   end
+end
+
+
+function Scheduler:postevent(event)
+   local type = event.type or error("event has no type", 2)
+   local eventhandler = self.eventhandlers[type]
+   if eventhandler.waiting then
+      self:makeready(eventhandler.proc, {event})
+   else
+      eventhandler.eventq:pushright(event)
+   end
+end
+
+
+
 function Scheduler:handleunknown(callres)
    print("unknown call from pid " .. self.running.pid)
 end
@@ -524,13 +601,17 @@ function Scheduler:run()
 
       retval = ec.getevent(self.estate, timeout, self.packetq)
       self.packetq = {}
-      if retval ~= nil and retval.type == "sock" then
+      if retval ~= nil then
+	 if retval.type == "sock" then
 	 
-	 local wp = self.waitingforpacketproc
-	 if wp then
-	    table.insert(self.readyq, {proc=wp, args={{retval}}})
+	    local wp = self.waitingforpacketproc
+	    if wp then
+	       table.insert(self.readyq, {proc=wp, args={{retval}}})
+	    end
+	    self.waitingforpacketproc = nil
+	 else
+	    self:postevent(retval)
 	 end
-	 self.waitingforpacketproc = nil
       end
    end
    print("end numrunning " .. self.numrunning)
