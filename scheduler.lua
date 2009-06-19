@@ -498,14 +498,13 @@ end
 function Scheduler:run()
    --while (#(self.readyq) > 0 or #(self.sleeping) > 0) do
    while self.numrunning > 0 do
-
+      
       self:wakeupsleepers()
       while (#(self.readyq) > 0) do
-	 --print("there are " .. tonumber(#(self.readyq)) .. " ready jobs")
 	 self:runone()
 	 self:wakeupsleepers()
       end
-
+      
       local first = self.sleeping[#(self.sleeping)]
       local timeout
       if first ~= nil then
@@ -514,39 +513,18 @@ function Scheduler:run()
       else
 	 timeout = 0
       end
+      
 
-      --table.foreach(first, print)
-      --if timeout ~= 0 then
-	 -- there's still something to be done
-	 --print("getevent with a timeout of " .. tostring(timeout))
-	
-	 --uepack = {fromid="das esch de rap shit", rpcid="deadbeef", call=2}
-	 -- encode packet from table, header version 1
-	 --rawpack = encodepacket(uepack, 1)
-	 -- 2 packets prepared
-	 --packets = {{to={addr="192.168.1.5", port=4501}},
-	 --	    {to={addr="78.46.82.237", port=6002}, raw=rawpack}}
-	 --	    --{to={addr="78.46.82.237", port=32769}, raw="rap shit"}}
-      --print("ec.getevent, timeout " .. timeout .. " & handlepacketproc " .. tostring(self.handlepacketproc))
-	 retval = ec.getevent(self.estate, timeout, self.packetq)
-	 self.packetq = {}
-	 if retval ~= nil and retval.type == "sock" then
-	    --decodepacket(retval)
-
-	    --self.callmanager:incoming({retval})
-	    -- srun doesn't work because we can't yield to ourself
-	    -- srun(runcall, retval)
-	    --self:runf(runcall, retval)
-
-	    local wp = self.waitingforpacketproc
-	    if wp then
-	       table.insert(self.readyq, {proc=wp, args={{retval}}})
-	    end
-	    self.waitingforpacketproc = nil
+      retval = ec.getevent(self.estate, timeout, self.packetq)
+      self.packetq = {}
+      if retval ~= nil and retval.type == "sock" then
+	 
+	 local wp = self.waitingforpacketproc
+	 if wp then
+	    table.insert(self.readyq, {proc=wp, args={{retval}}})
 	 end
-      --else
-	 --break
-      --end
+	 self.waitingforpacketproc = nil
+      end
    end
    print("end numrunning " .. self.numrunning)
 end
