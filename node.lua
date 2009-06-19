@@ -12,7 +12,7 @@ function KademluaNode:new(id)
 			     ["store"] = self.instore,
 			     ["findvalue"] = self.infindvalue
 			    },
-	      datastore = {} -- prototype
+	      datastore = DataStore:new()
 	   }
 
    o.routingtable = RoutingTable:new(id, o)
@@ -31,7 +31,7 @@ function KademluaNode:sendRPC(whom, name, ...)
    local arg = arg
    arg.n = nil
 
-   --print("SENDRPC: arg", arg)
+   --print("SENDRPC: name ", name, " arg: ", unpack(arg))
    --for name, val in pairs(arg) do print("SENDRPC:", name, val) end
 
 
@@ -200,11 +200,16 @@ function KademluaNode:findnode(who, id)
 end
 
 
-function KademluaNode:instore(from, id, data)
+function KademluaNode:instore(from, id, data, add)
    if type(id) ~= "string" then return 0 end
    if #id ~= 20 then return 0 end
 
-   self.datastore[id] = data
+   if add == 1 then
+      self.datastore:overwrite(from, id, data)
+   else
+      self.datastore:add(from, id, data)
+   end
+
    return 1
 end
 
@@ -223,17 +228,40 @@ function KademluaNode:iterativestore(id, what)
 end
 
 
-function KademluaNode:infindvalue(from, id)
+function KademluaNode:iterativeadd(id, what)
+   local nodelist = self:iterativefindnode(id)
+   for i, node in ipairs(nodelist) do
+      local errorfree, ret = self:store(node, id, what, 1)
+      print("ADD: on " .. node.addr .. ":" .. node.port .. " => " .. tostring(errorfree))
+   end
+end
+
+
+function KademluaNode:infindvalue(from, id, howmany)
    print("INFINDVALUE: in")
    if type(id) ~= "string" then return {} end
    if #id ~= 20 then return {} end
    print("INFINDVALUE: not rejected")
+
+   local howmany = howmany or 1
+   print("INFINDVALUE: howmany: " .. tostring(howmany))
+
    local ret = {}
-   local val = self.datastore[id]
-   if val ~= nil then
-      ret.retval = val
+   --local val = self.datastore[id]
+   local values = self.datastore:getvaluesbykey(id)
+   local valueslen = #values
+   if valueslen <= howmany then
+      ret.retval = values
+   else
+      local shorter = {}
+      for i=1,howmany do shorter[i] = values[i] end
+      ret.retval = shorter
    end
    
+
+   -- TODO: think about how many closest nodes to return. there should
+   -- probably be a distinction between the case when we know some
+   -- entries and the case when we do not.
    ret.closest = {}
    local fromid = from.id
    local strcomp = RoutingTable.strcomp
@@ -251,14 +279,19 @@ function KademluaNode:infindvalue(from, id)
 end
 
 
-function KademluaNode:findvalue(who, id)
-   return self:sendRPC(who, "findvalue", id)
+function KademluaNode:findvalue(who, id, howmany)
+   return self:sendRPC(who, "findvalue", id, howmany)
 end
 
 
-function KademluaNode:iterativefindvalue(id, max)
+function KademluaNode:iterativefindvalue(id, max, maxentries)
+   -- maximum number of answering nodes to consider
    local max = max or 3
-   return self:iterativefind(id, "findvalue", 3)
+   -- maximum number of entries to return
+   print("maxentries:",maxentries)
+   local maxentries = maxentries or 4096
+   local extra = {max=max, args={maxentries}}
+   return self:iterativefind(id, "findvalue", extra)
 end
 
 
@@ -306,15 +339,21 @@ end
 
 
 function KademluaNode:iterativefindnode(id, bootstrap)
-   return self:iterativefind(id, "findnode", 65535, bootstrap)
+   return self:iterativefind(id, "findnode", {numret=65535}, bootstrap)
 end
 
 
-function KademluaNode:iterativefind(id, rpc, numret, bootstrap)
+function KademluaNode:iterativefind(id, rpc, extra, bootstrap)
    print("NODE: iterativefind " .. ec.tohex(id))
 
    local rpc = rpc or "findnode"
-   local numret = numret or 3
+   local numret = 3
+   local args = {}
+   if extra and type(extra) == "table" then
+      numret = extra.numret or numret
+      args = extra.args or args
+   end
+
    local findnode = (rpc == "findnode")
 
    local inorder = bootstrap or self.routingtable:getclosest(id)
@@ -413,7 +452,7 @@ function KademluaNode:iterativefind(id, rpc, numret, bootstrap)
       if known[contact.unique] == nil then error("contact is not in known table, even though it should be") end
       --local errorfree, closest = self:findnode(contact, id)
 
-      local errorfree, from, closest = self[rpc](self, contact, id)
+      local errorfree, from, closest = self[rpc](self, contact, id, unpack(args))
       print("CLERK: RPC " .. rpc .. " => " .. tostring(errorfree))
       -- proper tail calls FTW
       if not errorfree then return clerk() end
