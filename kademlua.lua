@@ -6,6 +6,7 @@ require("routing")
 require("bencoding")
 require("liveliness")
 require("datastore")
+require("shell")
 
 
 -- kademlua.lua
@@ -149,6 +150,9 @@ function f1()
 
    local node = KademluaNode:new(id)
    srun(node.run, node)
+
+   local shell = KademluaShell:new(node)
+   srun(shell.main, shell)
    
    --for i, to in ipairs(bootstrap) do
    --   srun(node.ping, node, to)
