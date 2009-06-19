@@ -409,6 +409,13 @@ function Scheduler:handleunknown(callres)
 end
 
 
+function Scheduler:makeready(proc, args)
+   local proc = proc or error("supply a proc", 2)
+   local args = args or {}
+   table.insert(self.readyq, {proc=proc, args=args})
+end
+
+
 function Scheduler:runone()
    local qentry = table.remove(self.readyq, 1)
    if qentry == nil then return end
