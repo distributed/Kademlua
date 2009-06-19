@@ -130,6 +130,23 @@ function f1()
 
    print("id: " .. ec.tohex(id))
 
+   --ds = DataStore:new()
+
+   --nd = {addr="192.168.1.6",port=8020,id="das esch de rap shit"}
+   --nd.unique = nd.addr .. "|" .. tostring(nd.port) .. "|" .. nd.id
+   --ds:add(nd,
+--	  "deadbeefxydeadbeefab",
+--	  "super sach")
+
+   --while true do
+   --   ssleep(1.0)
+   --   print("if you cee kay spells fuck")
+   --   vls = ds:getvaluesbykey("deadbeefxydeadbeefab")
+   --   if vls then
+   -- 	 table.foreach(vls, print)
+   --   end
+   --end
+
    local node = KademluaNode:new(id)
    srun(node.run, node)
    
@@ -154,10 +171,24 @@ function f1()
 --   end
    ssleep(0.5)
 
-   node:iterativestore(ec.sha1("das"), "esch de rap shit")
-   local ret = node:iterativefindvalue(ec.sha1("das"))
+   node:iterativeadd(ec.sha1("das"), "stored by " .. tostring(port))
+
+   -- find sha1("das") on (nil = default) nodes, maximum 6 entries
+   local ret = node:iterativefindvalue(ec.sha1("das"), nil, 6)
    print("ITERATIVEFINDVALUE: done")
-   table.foreach(ret, function(index, what) if type(what) == "table" then print(what.from.addr .. ":" .. what.from.port .. ": " .. tostring(what.retval)) end end)
+   --table.foreach(ret, function(index, what) if type(what) == "table" then print(what.from.addr .. ":" .. what.from.port .. ": " .. tostring(what.retval)) end end)
+   for i, what in pairs(ret) do
+      if type(what) == "table" then
+	 print(what.from.addr .. ":" .. what.from.port .. ": " .. tostring(what.retval))
+	 local retval = what.retval
+	 if type(retval) == "table" then
+	    table.foreach(retval, print)
+	 end
+      else
+	 --print(what.from.addr .. ":" .. what.from.port .. ": " .. tostring(what))
+	 print("what", i, what)
+      end
+   end
 
    srun(printn, 3)
 
@@ -182,6 +213,7 @@ function f1()
 
    local errorfree, ret = scall(f2)
    --srun(client, "c4")
+
    return "retval f1", ret
 end
 
