@@ -12,7 +12,8 @@ function DataStore:new(id)
       byhash = {},
       byowner = {},
       byownerandkey = {},
-      timebuckets = {}
+      timebuckets = {},
+      stop = false
    }
 
    setmetatable(o,self)
@@ -26,7 +27,7 @@ function DataStore.copyowner(owner)
    return {id=owner.id,
 	   addr=owner.addr,
 	   port=owner.port,
-	   unique=unique}
+	   unique=owner.unique}
 end
    
 
@@ -47,12 +48,13 @@ end
 function DataStore:addentry(owner, key, value)
    local now = ec.time()
 
-   if not owner.unique then
-      local unique = owner.addr .. "|" .. tostring(owner.port) .. "|" .. owner.id
+   local unique = owner.unique
+   if not unique then
+      unique = owner.addr .. "|" .. tostring(owner.port) .. "|" .. owner.id
       owner.unique = unique
    end
 
-   local owner = DataStore.copyowner()
+   local owner = DataStore.copyowner(owner)
    local timebucketno = math.floor(now / bucketduration)
    local ownerandkey = DataStore.ownerandkey(owner, key)
 
@@ -81,7 +83,7 @@ function DataStore:addentry(owner, key, value)
    if timebucket then
       timebucket[entry] = entry
    else
-      self.timeuckets[timebucketno] = {[entry] = entry}
+      self.timebuckets[timebucketno] = {[entry] = entry}
    end
 
    self.byownerandkey[ownerandkey] = entry
@@ -136,10 +138,21 @@ end
 
 
 function DataStore:overwrite(owner, key, value)
-   local entries = self.byhash[key]
-   for n, entries in pairs(entries) do
-      self:removeentry(entry)
+   local byhash = self.byhash[key]
+
+   -- if there already are entries for this key then remove them
+   if byhash then
+      -- shallow copy self.byhash[key] so as not to interfere with
+      -- removeentry
+      local entries = {}
+      for k, v in pairs(byhash) do entries[k] = v end
+      
+      for n, entry in pairs(byhash) do
+	 self:removeentry(entry)
+      end
    end
+
+   self:add(owner, key, value)
 end
 
 
