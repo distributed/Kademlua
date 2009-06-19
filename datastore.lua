@@ -4,6 +4,7 @@
 -- (C) 2009, Michael Meier
 
 local bucketduration = 120
+local maxage = 120
 
 DataStore = {}
 
@@ -15,6 +16,8 @@ function DataStore:new(id)
       timebuckets = {},
       stop = false
    }
+
+   srun(DataStore.agecheck, o)
 
    setmetatable(o,self)
    self.__index = self
@@ -33,6 +36,36 @@ end
 
 function DataStore.ownerandkey(owner, key)
    return (owner.unique .. key)
+end
+
+
+function DataStore:agecheck()
+   local time = ec.time
+   local floor = math.floor
+   local timebuckets = self.timebuckets
+   local maxage = maxage
+
+   while not self.stop do
+      ssleep(bucketduration / 2)
+      local now = time()
+      local timebucketno = floor((now - maxage) / bucketduration)
+      
+      local timebucket = timebuckets[timebucketno]
+      while timebucket do
+	 -- build a list of entries to remove so as not to interfere
+	 -- with removeentry
+	 local toremove = {}
+	 for k, v in pairs(timebucket) do toremove[k] = v end
+	 
+	 -- and remove them
+	 for k, v in pairs(toremove) do
+	    self:removeentry(v)
+	 end
+
+	 timebucketno = timebucketno - bucketduration
+	 timebucket = timebuckets[timebucketno]
+      end
+   end
 end
 
 
