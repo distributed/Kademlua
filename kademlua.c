@@ -437,7 +437,7 @@ static int tohex(lua_State *L) {
 char fromdigit(char digit) {
   if ((digit >= 48) & (digit < 58)) {
     return digit -48;
-  } else if ((digit >= 97) & (digit < 102)) {
+  } else if ((digit >= 97) & (digit <= 102)) {
     return digit - 87;
   } else {
     return 0;
