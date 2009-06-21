@@ -2,13 +2,14 @@
 -- protocol.lua
 -- (C) 2009, Michael Meier
 
-rpcidlength = 8
+local rpcidlength = 8
 
 -- packet table -> binary string
 function encodepacket(info, headervers)
 
    local chunks = {}
-   
+   local hv
+
    if headervers == nil then
       hv = 1
    else
