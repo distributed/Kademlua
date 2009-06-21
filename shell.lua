@@ -21,6 +21,35 @@ function KademluaShell:help(argtable)
 end
 
 
+function KademluaShell:findnode(argtable)
+   local id = argtable[2]
+
+   if (type(id) ~= "string")then
+      return print("! need an id: expected string: findnode <id>")
+   end
+
+   if #id == 40 then
+      local errorfree, convid = pcall(ec.fromhex, id)
+      if not errorfree then 
+	 print("! need an id: could not convert from hex: findnode <id>") 
+	 return
+      end
+      id = convid
+   elseif #id == 20 then
+      -- fine
+   else
+      print("! need an id: incorrect length: findnode <id>")
+      return
+   end
+
+   local nodelist, processed, inorder = self.node:iterativefindnode(id)
+   for k, node in pairs(nodelist) do
+      print(node.addr, node.port, ec.tohex(node.id), ec.tohex(ec.xor(node.id, id)))
+   end
+   print("while looking for", ec.tohex(id))
+end
+
+
 function KademluaShell:main()
    local errorfree, errmsg = sregisterforevent("stdin")
    print("KademluaShell: register:", errorfree, errmsg)
@@ -28,7 +57,9 @@ function KademluaShell:main()
       error("KademluaShell could not register for stdin event")
    end
 
-   local names = {["help"]=self.help}
+   local names = {["help"]=self.help,
+	          ["findnode"]=self.findnode,
+                 }
 
    while true do
       local event = swaitforevent("stdin")
