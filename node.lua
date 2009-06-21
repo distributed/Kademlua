@@ -478,6 +478,7 @@ function KademluaNode:iterativefind(id, rpc, extra, bootstrap)
 	    local retval = closest.retval
 	    print("CLERK: got retval: " .. tostring(retval))
 	    
+	    -- TODO: stronger checks about correctness of retval
 	    if rets.n < numret then
 	       rets[from.unique] = {retval=retval, from=from}
 	       rets.n = rets.n + 1
