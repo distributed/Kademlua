@@ -7,6 +7,10 @@ local maxeventpipelen = 100
 -- how soon a bucketwatchdog starts a probe again
 local probebackoff = 5.0 
 
+-- maximum age of entries in routing table to go unchecked if bucket
+-- is full
+local maxage = 120
+
 
 RoutingTable = {k=20}
 
@@ -77,7 +81,7 @@ function RoutingTable:bucketwatchdog(bucket, eventpipe)
    local nodequeue = bucket.nodequeue
    local k = RoutingTable.k
    
-   local maxage = 10
+   local maxage = maxage or 10
 
    local lastprobetime = 0
 
