@@ -87,7 +87,7 @@ function KademluaShell:main()
    local names = {["help"]=self.help,
 	          ["findnode"]=self.findnode,
 	          ["gc"]=self.gc,
-                 }
+		  ["sha1"]=ec.sha1}
 
    while true do
       local event = swaitforevent("stdin")
