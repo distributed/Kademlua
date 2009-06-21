@@ -171,7 +171,7 @@ end
 
 function RoutingTable:removenodeatpos(bucketno, i)
    local bucket = self.buckets[bucketno]
-   node = table.remove(bucket.inorder, i)
+   local node = table.remove(bucket.inorder, i)
    bucket.byunique[node.unique] = nil
    bucket.count = bucket.count - 1
    return node
@@ -354,13 +354,13 @@ end
 function RoutingTable:dryrun()
    --rtid = string.rep("\0", 20)
    --rt = RoutingTable:new(rtid)
-   rt = RoutingTable:new("das esch de rap shit")
-   rt = RoutingTable:new(string.rep("\0", 20))
+   local rt = RoutingTable:new("das esch de rap shit")
+   local rt = RoutingTable:new(string.rep("\0", 20))
    
-   myaddr = "192.168.1.5"
+   local myaddr = "192.168.1.5"
    
    math.randomseed(42)
-   nodes = {}
+   local nodes = {}
    for i = 1,500 do
       table.insert(nodes,
 		   {addr=myaddr, port=4200, id=ec.sha1(tostring(math.random()))})
@@ -375,7 +375,7 @@ function RoutingTable:dryrun()
 
    local searchid = string.rep("\8",20)
    local t1 = ec.time()
-   cl = rt:getclosest(searchid, 20)
+   local cl = rt:getclosest(searchid, 20)
    local t2 = ec.time()
    print("took: " .. ((t2 - t1)*1000))
    for i=1,#cl do
