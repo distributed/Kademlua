@@ -32,7 +32,7 @@ function CallManager:timeoutf(rpcid, howsoon)
    if self.running[rpcid] ~= nil then
       -- call timed out
       print("CALL TIMED OUT")
-      runningt = self.running[rpcid]
+      local runningt = self.running[rpcid]
       self.running[rpcid] = nil
 
       self.livelinessmanager:timeout(runningt.packet.to, rpcid)
@@ -47,7 +47,7 @@ end
 
 function CallManager:incomingloop()
    while 1 do
-      packets = coroutine.yield("gp")
+      local packets = coroutine.yield("gp")
       for i, pack in ipairs(packets) do
 	 decodepacket(pack)
       end
@@ -114,7 +114,7 @@ function CallManager:incoming(packets)
 	       --if packet.call == 1 then
 	       --  outpacks = self.node:inping(packet)
 	       --end
-	       outpacks = self.node:incomingRPC(packet)
+	       local outpacks = self.node:incomingRPC(packet)
 	       for i, pack in ipairs(outpacks) do
 		  local raw = encodepacket(pack)
 		  pack.raw = raw
@@ -168,7 +168,7 @@ function CallManager:outgoingloop()
    sregister("callmanager")
    while 1 do
       --print("CALLMANAGER OUTGOING WAITING FOR REQUEST")
-      from, req = swreq()
+      local from, req = swreq()
       --print("CALLMANAGER OUTGOING LOOP GOT REQUEST!")
       self:outgoing(from, req)
    end
