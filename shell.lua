@@ -50,6 +50,33 @@ function KademluaShell:findnode(argtable)
 end
 
 
+function KademluaShell:gc(argtable)
+   local cmd = argtable[2] or ""
+
+   if cmd == "" then
+      local memusage = collectgarbage("count")
+      print(("lua memory usage: %1.3f kbytes"):format(memusage))
+   elseif cmd == "collect" then
+      local memusage = collectgarbage("count")
+      print(("lua memory usage before: %1.3f kbytes"):format(memusage))
+
+      collectgarbage("collect")
+
+      local memusage = collectgarbage("count")
+      print(("lua memory usage after: %1.3f kbytes"):format(memusage))
+
+   elseif cmd == "step" then
+      local memusage = collectgarbage("count")
+      print(("lua memory usage before: %1.3f kbytes"):format(memusage))
+
+      collectgarbage("step")
+
+      local memusage = collectgarbage("count")
+      print(("lua memory usage after: %1.3f kbytes"):format(memusage))
+   end
+end
+
+
 function KademluaShell:main()
    local errorfree, errmsg = sregisterforevent("stdin")
    print("KademluaShell: register:", errorfree, errmsg)
@@ -59,6 +86,7 @@ function KademluaShell:main()
 
    local names = {["help"]=self.help,
 	          ["findnode"]=self.findnode,
+	          ["gc"]=self.gc,
                  }
 
    while true do
