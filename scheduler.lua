@@ -49,7 +49,7 @@ end
 -- TODO: should raise an error if there is is one ;)
 function sreq(nameorpid, req)
    local t = type(nameorpid)
-   if t ~= "string" and t ~= number then error("first parameter has to be name or pid") end
+   if t ~= "string" and t ~= "number" then error("first parameter has to be name or pid") end
    if type(req) ~= "table" then error("req has to be a table") end
 
    return coroutine.yield("req", nameorpid, req)
@@ -73,25 +73,25 @@ end
 
 function sregisterforevent(eventname)
    print(type(eventname))
-   if not type(eventame) == "string" then error("sregisterforevent: eventname has to be a string", 2) end
+   if not type(eventname) == "string" then error("sregisterforevent: eventname has to be a string", 2) end
    return coroutine.yield("rfe", eventname)
 end
 
 
 function sunregisterfromevent(eventname)
-   if not type(eventame) == "string" then error("sunregisterfromevent: eventname has to be a string", 2) end
-   return couroutine.yield("urfe", eventname)
+   if not type(eventname) == "string" then error("sunregisterfromevent: eventname has to be a string", 2) end
+   return coroutine.yield("urfe", eventname)
 end
 
 
 function swaitforevent(eventname)
-   if not type(eventame) == "string" then error("swaitforevent: eventname has to be a string", 2) end
+   if not type(eventname) == "string" then error("swaitforevent: eventname has to be a string", 2) end
    return coroutine.yield("wfe", eventname)
 end
 
 
 function runcall(packet)
-   errorfree, retpack = scall(handlecall, packet)
+   local errorfree, retpack = scall(handlecall, packet)
 
    --print("runcall errorfree, retpack:", errorfree, retpack)
 
@@ -186,7 +186,7 @@ end
 
 function Channel:receive()
    self.balance = self.balance - 1
-   ret = {coroutine.yield("cr", self)}
+   local ret = {coroutine.yield("cr", self)}
    --table.remove(ret, 1)
    return unpack(ret)
 end
@@ -328,7 +328,7 @@ function Scheduler:handlechannelsend(callres)
    
 
    if channel.receiving:length() > 0 then
-      receiver = channel.receiving:popleft()
+      local receiver = channel.receiving:popleft()
       table.insert(self.readyq, {proc=receiver.proc, args=args})
       table.insert(self.readyq, {proc=self.running, args={}})
    else
@@ -344,7 +344,7 @@ function Scheduler:handlechannelreceive(callres)
    local channel = callres[3]
 
    if channel.sending:length() > 0 then
-      sender = channel.sending:popleft()
+      local sender = channel.sending:popleft()
       table.insert(self.readyq, {proc=self.running, args=sender.args})
       if not sender.async then
 	 table.insert(self.readyq, {proc=sender.proc, args={}})
@@ -599,7 +599,7 @@ function Scheduler:run()
       end
       
 
-      retval = ec.getevent(self.estate, timeout, self.packetq)
+      local retval = ec.getevent(self.estate, timeout, self.packetq)
       self.packetq = {}
       if retval ~= nil then
 	 if retval.type == "sock" then
