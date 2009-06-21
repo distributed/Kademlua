@@ -1,4 +1,6 @@
 
+local print = print
+
 KademluaShell = {}
 
 function KademluaShell:new(node)
