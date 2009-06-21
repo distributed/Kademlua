@@ -369,11 +369,16 @@ function KademluaNode:iterativefind(id, rpc, extra, bootstrap)
    local rets = {n=0}
    local myid = self.id
    for i,v in ipairs(inorder) do
-      -- anti loopback
-      if id ~= v.id then
+      -- here is a TODO: 
+      -- "anti loopback" 
+      
+      -- this does not make any sense, this excludes some nodes from
+      -- the known table while they still are in the inorder table and
+      -- don't have a real distance metric. huh.
+      --if id ~= v.id then
 	 v.distance = ec.xor(id, v.id)
 	 known[v.unique] = v
-      end
+      --end
    end
 
    local alpha = 3
