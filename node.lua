@@ -413,7 +413,7 @@ function KademluaNode:iterativefind(id, rpc, extra, bootstrap)
       sort(inorder, order)
       local len = #inorder
 
-      ret = {}
+      local ret = {}
       for i=math.max(1,len-20+1),len do
 	 insert(ret, inorder[i])
       end
