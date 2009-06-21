@@ -99,7 +99,12 @@ function KademluaShell:main()
 	          ["findnode"]=wrap(self.findnode),
 	          ["gc"]=wrap(self.gc),
 		  ["sha1"]=ec.sha1,
-	          ["routing"]=wrap(self.routing)}
+	          ["routing"]=wrap(self.routing),
+	          ["print"]=print,
+	          xor=ec.xor,
+	          tohex=ec.tohex,
+	          fromhex=ec.fromhex,
+		  getbucketno=ec.getbucketno}
 
    local env = {}
    for key,value in pairs(names) do
