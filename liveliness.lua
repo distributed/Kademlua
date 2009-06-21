@@ -212,6 +212,7 @@ function LivelinessManager:newwatchdog(contact)
 	    if stepattimeout >= self.maxretry then
 	       for name, clientt in pairs(waitingclients) do
 		  clientt.retpipe:sendasync(false, contact)
+		  -- TODO: should probably die after that
 	       end
 
 	       waitingclients = {}
@@ -219,6 +220,11 @@ function LivelinessManager:newwatchdog(contact)
 	    end
 	    
 	 elseif msg == "die" then
+	    local socket = contact.addr .. "|" .. tostring(contact.port)
+	    self.bysocket[socket] = nil
+	    if contact.unique then
+	       self.byunique[contact.unique] = nil
+	    end
 	    return
 	 end
       end
