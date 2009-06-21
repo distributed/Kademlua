@@ -96,7 +96,7 @@ function KademluaNode:ping(who)
    --coroutine.yield("p", packet)
    print("PING REQUEST")
    --rets = {sreq("callmanager", packet)}
-   rets = {self:sendRPC(who, "ping")}
+   local rets = {self:sendRPC(who, "ping")}
    print("PING TO " .. who.addr .. ":" .. who.port)  
    --table.foreach(rets, print)
    --print("----")
