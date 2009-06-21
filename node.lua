@@ -249,13 +249,17 @@ function KademluaNode:infindvalue(from, id, howmany)
    local ret = {}
    --local val = self.datastore[id]
    local values = self.datastore:getvaluesbykey(id)
-   local valueslen = #values
-   if valueslen <= howmany then
-      ret.retval = values
-   else
-      local shorter = {}
-      for i=1,howmany do shorter[i] = values[i] end
-      ret.retval = shorter
+   -- if the nothing has been found for the specified id: return
+   -- nothing
+   if values then
+      local valueslen = #values
+      if valueslen <= howmany then
+	 ret.retval = values
+      else
+	 local shorter = {}
+	 for i=1,howmany do shorter[i] = values[i] end
+	 ret.retval = shorter
+      end
    end
    
 
