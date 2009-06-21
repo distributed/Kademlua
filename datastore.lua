@@ -130,6 +130,8 @@ end
 function DataStore:updateentry(entry, value)
    entry.value = value
 
+   local now = ec.time()
+
    local oldtimebucketno = entry.timebucketno
    local newtimebucketno = math.floor(now / bucketduration)
    if newtimebucketno ~= oldtimebucketno then
