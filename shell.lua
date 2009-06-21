@@ -77,6 +77,11 @@ function KademluaShell:gc(argtable)
 end
 
 
+function KademluaShell:routing(argtable)
+   self.node.routingtable:print()
+end
+
+
 function KademluaShell:main()
    local errorfree, errmsg = sregisterforevent("stdin")
    print("KademluaShell: register:", errorfree, errmsg)
@@ -87,7 +92,8 @@ function KademluaShell:main()
    local names = {["help"]=self.help,
 	          ["findnode"]=self.findnode,
 	          ["gc"]=self.gc,
-		  ["sha1"]=ec.sha1}
+		  ["sha1"]=ec.sha1,
+	          ["routing"]=self.routing}
 
    while true do
       local event = swaitforevent("stdin")
