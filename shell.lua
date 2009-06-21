@@ -21,9 +21,7 @@ function KademluaShell:help(argtable)
 end
 
 
-function KademluaShell:findnode(argtable)
-   local id = argtable[2]
-
+function KademluaShell:findnode(id)
    if (type(id) ~= "string")then
       return print("! need an id: expected string: findnode <id>")
    end
@@ -50,8 +48,10 @@ function KademluaShell:findnode(argtable)
 end
 
 
-function KademluaShell:gc(argtable)
-   local cmd = argtable[2] or ""
+function KademluaShell:gc(cmd)
+   local cmd = cmd or ""
+
+   print(cmd)
 
    if cmd == "" then
       local memusage = collectgarbage("count")
@@ -89,35 +89,30 @@ function KademluaShell:main()
       error("KademluaShell could not register for stdin event")
    end
 
-   local names = {["help"]=self.help,
-	          ["findnode"]=self.findnode,
-	          ["gc"]=self.gc,
+   local function wrap(fn)
+      return function(...)
+		return fn(self, unpack(arg))
+      end
+   end
+
+   local names = {["help"]=wrap(self.help),
+	          ["findnode"]=wrap(self.findnode),
+	          ["gc"]=wrap(self.gc),
 		  ["sha1"]=ec.sha1,
-	          ["routing"]=self.routing}
+	          ["routing"]=wrap(self.routing)}
+
+   local env = {}
+   for key,value in pairs(names) do
+      env[key] = value
+   end
 
    while true do
       local event = swaitforevent("stdin")
       if event.raw then
-	 local env = {}
-	 for key,value in pairs(names) do
-	    env[key] = value
-	 end
-
-	 local chunk = loadstring("args = {" .. event.raw .. "}")
+	 local chunk = loadstring(event.raw)
 	 if chunk then
 	    setfenv(chunk, env)
 	    pcall(chunk)
-	    local args = env.args
-	    
-	    if args[1] then
-	       if type(args[1] == "function") then
-		  scall(args[1], self, args)
-	       else
-		  print("not a valid command")
-	       end
-	    else
-	       print("! no command specified")
-	    end
 	 else
 	    print("! syntax error")
 	 end
