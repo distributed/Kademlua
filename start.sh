@@ -11,7 +11,7 @@ max=8102
 # glorious mac os x does not offer a seq command, so here we go...
 counter=$min
 while [ $counter -le $max ]; do
-    echo $counter
+#    echo $counter
     sn="$sn $counter"
     counter=$(expr $counter + 1)
 done
