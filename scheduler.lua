@@ -217,10 +217,7 @@ function Scheduler:new(estate)
 
    setmetatable(o,self)
    self.__index = self
-   print(o)
-   print("--- foreach ---")
-   table.foreach(o, print)
-   print("--- end ---")
+
    local dispatch = {y = self.handleyield,
 		     c = self.handlecall,
 		     r = self.handlerun,
