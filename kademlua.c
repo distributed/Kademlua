@@ -21,7 +21,7 @@
 #include <sys/time.h>
 #include <sys/errno.h>
 
-
+#include "kademlua.h"
 
 /* kademlua.c 
  * (C) 2009, Michael Meier
@@ -31,15 +31,6 @@
 
 #define DEFAULT_PORT 8000
 #define HASH_SECT u_int32_t
-
-
-struct eventstate {
-  lua_State *mstate;
-  int sock;
-  u_int16_t port;
-  struct sockaddr_in mysockaddr;
-  int readfromstdin;
-};
 
 
 
@@ -58,7 +49,7 @@ void notdecoded(lua_State *L) {
 
 }
 
-static int recvpacket(lua_State *L, struct eventstate *estate) {
+int recvpacket(lua_State *L, struct eventstate *estate) {
 
   // TODO: better setting and handling of buffer size in recvfrom
   char sbuf[16384];
@@ -191,7 +182,7 @@ static int recvpacket(lua_State *L, struct eventstate *estate) {
 }
 
 
-static int getevent(lua_State *L) {
+int getevent(lua_State *L) {
 
   if (!lua_isuserdata(L, 1))
     return 0;
@@ -369,7 +360,7 @@ static int getevent(lua_State *L) {
 }
 
 
-static int sha1(lua_State* L) {
+int sha1(lua_State* L) {
   
   int nargs = lua_gettop(L);
   if (nargs != 1) {
@@ -400,7 +391,8 @@ char nibbledigit(char digit) {
   }
 }
 
-static int tohex(lua_State *L) {
+
+int tohex(lua_State *L) {
 
   int nargs = lua_gettop(L);
   if (nargs != 1) {
@@ -445,7 +437,7 @@ char fromdigit(char digit) {
 }
 
 
-static int fromhex(lua_State *L) {
+int fromhex(lua_State *L) {
 
   int nargs = lua_gettop(L);
   if (nargs != 1) {
@@ -495,7 +487,7 @@ static int fromhex(lua_State *L) {
 }
 
 
-static int xor(lua_State *L) {
+int xor(lua_State *L) {
 
   int nargs = lua_gettop(L);
   if (nargs != 2) {
@@ -554,7 +546,7 @@ static int xor(lua_State *L) {
 }
 
 
-static int getbucketno(lua_State* L) {
+int getbucketno(lua_State* L) {
   
   int nargs = lua_gettop(L);
   if (nargs != 1) {
@@ -595,7 +587,7 @@ static int getbucketno(lua_State* L) {
 }
 
 
-static int ectime(lua_State *L) {
+int ectime(lua_State *L) {
   
   struct timeval t;
 
@@ -609,37 +601,32 @@ static int ectime(lua_State *L) {
 }
 
 
-
-static const struct luaL_reg eclib[] = {
-  {"getevent", getevent},
-  {"sha1", sha1},
-  {"tohex", tohex},
-  {"fromhex", fromhex},
-  {"xor", xor},
-  {"getbucketno", getbucketno},
-  {"time", ectime},
-  {NULL, NULL}
-};
+int initestate(lua_State *mstate) {
 
 
-
-struct eventstate* init(int argc, char **argv) {
-
-  lua_State *mstate = lua_open();
-  if (!mstate)
-    return NULL;
-  luaL_openlibs(mstate);
-  luaL_openlib(mstate, "ec", eclib, 0);
-  // clear stack after openlib pushed the ec lib
-  lua_settop(mstate, 0);
-
+  if (lua_gettop(mstate) != 1) {
+    lua_pushstring(mstate, "initestate() needs one argument table");
+    lua_error(mstate);
+  }
+  // on stack position 2
   struct eventstate *estate = lua_newuserdata(mstate, sizeof(struct eventstate));
   if (!estate)
-    return NULL;
+    return 0;
 
   estate->mstate = mstate;
   estate->readfromstdin = 1;
   estate->port = DEFAULT_PORT;
+
+  //lua_getglobal(mstate, "port");
+  lua_getfield(mstate, 1, "port");
+  if (!lua_isnumber(mstate, -1)) {
+    printf("port variable not correctly set in params.lua");
+    exit(1);
+  }
+  estate->port = (u_int16_t) lua_tonumber(mstate, -1);
+
+  lua_settop(mstate, 2);
+  // => only argtable and userdata
 
   if ((estate->sock = socket(PF_INET, SOCK_DGRAM, 0)) == -1) {
     perror("kademlua: socket");
@@ -657,33 +644,13 @@ struct eventstate* init(int argc, char **argv) {
   }
   
 
-  {
-    lua_newtable(mstate);
-    for (int i = 0; i < argc; i++) {
-      lua_pushnumber(mstate, i);
-      lua_pushstring(mstate, argv[i]);
-      lua_settable(mstate, -3);
-    }
-    lua_setglobal(mstate, "argv");
-  }
 
-  int res = luaL_loadfile(mstate, "params.lua");
-  if (res != 0) {
-    printf("error loading params.lua\n");
-    exit(1);
-  }
-
-  lua_call(mstate, 0, 0);
-
-  lua_getglobal(mstate, "port");
-  if (!lua_isnumber(mstate, -1)) {
-    printf("port variable not correctly set in params.lua");
-    exit(1);
-  }
+  /* snip */
   
-  estate->port = (u_int16_t) lua_tonumber(mstate, -1);
-  
-  // only preserve the new userdata for estate
+
+  // remove the argtable
+  lua_remove(mstate, 1);
+  // and be sure...
   lua_settop(mstate, 1);
   
 
@@ -717,35 +684,78 @@ struct eventstate* init(int argc, char **argv) {
     printf("bound to %s:%i\n", ascaddr, ntohs(estate->mysockaddr.sin_port));
   }
 
-  return estate;
-
+  //return estate;
+  return 1;
 }
 
 
-int main(int argc, char **argv) {
+int initec(lua_State *L) {
+  luaL_openlib(L, "ec", eclib, 0);
+  return 1;
+}
 
 
-  struct eventstate *estate = init(argc, argv);
-  if (!estate) {
-    printf("init failed\n");
+static const struct luaL_reg eclib[] = {
+  {"getevent", getevent},
+  {"sha1", sha1},
+  {"tohex", tohex},
+  {"fromhex", fromhex},
+  {"xor", xor},
+  {"getbucketno", getbucketno},
+  {"time", ectime},
+  {"initestate", initestate},
+  {NULL, NULL}
+};
+
+
+
+struct eventstate* init(int argc, char **argv) {
+
+  lua_State *mstate = lua_open();
+  if (!mstate)
+    return NULL;
+  luaL_openlibs(mstate);
+  luaL_openlib(mstate, "ec", eclib, 0);
+  // clear stack after openlib pushed the ec lib
+  lua_settop(mstate, 0);
+
+  pushargv(mstate, argc, argv);
+
+  int res = luaL_loadfile(mstate, "params.lua");
+  if (res != 0) {
+    printf("error loading params.lua\n");
     exit(1);
   }
-  /*getchar();*/
 
-  /* init pushed the estate userdata on the stack, push it into the
-     lua namespace */
-  lua_setglobal(estate->mstate, "estate");
+  lua_call(mstate, 0, 0);
 
-  {
-    int res = luaL_loadfile(estate->mstate, "kademlua.lua");
-    if (res != 0) {
-      printf("error loading kademlua.lua\n");
-      exit(1);
-    }
-
-    lua_call(estate->mstate, 0, 0);
+  lua_newtable(mstate);
+  lua_pushstring(mstate, "port");
+  lua_getglobal(mstate, "port");
+  lua_settable(mstate, -3);
+  
+  int ret = initestate(mstate);
+  if (ret == 0) {
+    printf("initestate failed.");
+    exit(1);
   }
-
-  return 0;
+  // initestate pushed userdata
+  return (struct eventstate*) lua_touserdata(mstate, 1);
 
 }
+
+
+void pushargv(lua_State *L, int argc, char **argv) {
+
+  lua_newtable(L);
+  for (int i = 0; i < argc; i++) {
+    lua_pushnumber(L, i);
+    lua_pushstring(L, argv[i]);
+    lua_settable(L, -3);
+  }
+  lua_setglobal(L, "argv");
+
+}
+
+
+
