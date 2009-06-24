@@ -12,6 +12,18 @@ require("shell")
 -- kademlua.lua
 -- (C) 2009, Michael Meier
 
+
+-- if we have not been called by the C program
+if not ec then
+   local getec = assert(package.loadlib(".libs/libkademlua.dylib", "initec"))
+   ec = getec()
+   argv = arg
+   require("params")
+   assert(port, "port needs to be specified")
+   estate = ec.initestate({port=port})
+end
+
+
 math.randomseed(ec.time())
 
 
