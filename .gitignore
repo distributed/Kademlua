@@ -1,4 +1,11 @@
 \#*#
 *~
 *.pyc
+*.o
+*.lo
+*.a
+*.la
+*.dylib
+*.so
+*.dll
 
