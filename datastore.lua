@@ -69,6 +69,7 @@ function DataStore:agecheck()
 end
 
 
+-- TODO: remove empty byhash/byowner buckets
 function DataStore:removeentry(entry)
    self.byhash[entry.key][entry] = nil
    self.byowner[entry.owner.unique][entry] = nil
