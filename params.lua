@@ -19,7 +19,7 @@ id = id or ec.sha1(tostring(port))
 --myaddr = "192.168.1.5"
 myaddr = myaddr or "127.0.0.1"
 
-bootstrap = bootstrap or {{addr=myaddr, port=8001},
-			  {addr=myaddr, port=8002}}
+bootstrap = bootstrap or {{addr=myaddr, port=8001},}
+			  --{addr=myaddr, port=8002}}
 
 print("PARAMS: port " .. port .. " myaddr " .. myaddr)
