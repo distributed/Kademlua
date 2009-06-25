@@ -104,6 +104,33 @@ function KademluaShell:routing(argtable)
 end
 
 
+function KademluaShell:add(id, what)
+
+   local id = id
+
+   if (type(id) ~= "string")then
+      return print("! need an id: expected string: add <id> <what>")
+   end
+
+   if #id == 40 then
+      local errorfree, convid = pcall(ec.fromhex, id)
+      if not errorfree then 
+	 print("! need an id: could not convert from hex: add <id> <what>") 
+	 return
+      end
+      id = convid
+   elseif #id == 20 then
+      -- fine
+   else
+      print("! need an id: incorrect length: findnode <id> <what>")
+      return
+   end
+
+   self.node:iterativeadd(id, what)
+
+end
+
+
 function KademluaShell:main()
    local errorfree, errmsg = sregisterforevent("stdin")
    print("KademluaShell: register:", errorfree, errmsg)
