@@ -254,7 +254,11 @@ function KademluaNode:infindvalue(from, id, howmany)
    if values then
       local valueslen = #values
       if valueslen <= howmany then
-	 ret.retval = values
+	 if valueslen > 0 then
+	    ret.retval = values
+	 else
+	    ret.retval = nil
+	 end
       else
 	 local shorter = {}
 	 for i=1,howmany do shorter[i] = values[i] end
