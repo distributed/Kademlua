@@ -222,6 +222,11 @@ function KademluaShell:main()
    end
 
    while true do
+      local numnodes = self.node.routingtable:numnodes()
+      local totnumnodes = 20 * 2 ^ (numnodes / 20)
+      io.write(("%i~%i | %4.0f > "):format(numnodes,
+					     totnumnodes,
+					     collectgarbage("count")))
       local event = swaitforevent("stdin")
       if event.raw then
 	 local chunk = loadstring(event.raw)
