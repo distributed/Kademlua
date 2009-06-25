@@ -144,7 +144,7 @@ function DataStore:updateentry(entry, value)
       if timebucket then
 	 timebucket[entry] = entry
       else
-	 self.timeuckets[timebucketno] = {[entry] = entry}
+	 self.timebuckets[timebucketno] = {[entry] = entry}
       end
    end
 
