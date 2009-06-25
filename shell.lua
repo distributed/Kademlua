@@ -131,6 +131,64 @@ function KademluaShell:add(id, what)
 end
 
 
+function KademluaShell:findvalue(id, maxnodes, maxentriespernode)
+
+   local id = id
+
+   if (type(id) ~= "string")then
+      return print("! need an id: expected string: findvalue <id> (maxnodes) (maxentriespernode)")
+   end
+
+   if #id == 40 then
+      local errorfree, convid = pcall(ec.fromhex, id)
+      if not errorfree then 
+	 print("! need an id: could not convert from hex: findvalue <id> (maxnodes) (maxentriespernode)")
+	 return
+      end
+      id = convid
+   elseif #id == 20 then
+      -- fine
+   else
+      print("! need an id: incorrect length: findvalue <id> (maxnodes) (maxentriespernode)")
+      return
+   end
+
+   local maxnodes = maxnodes or 3
+   if type(maxnodes) ~= "number" or maxnodes <= 0 then
+      print("maxnodes needs to be a valid number")
+      return
+   end
+
+   local maxentriespernode = maxentriespernode or 6
+   if type(maxentriespernode) ~= "number" or maxentriespernode <= 0 then
+      print("maxentriespernode needs to be a valid number")
+      return
+   end
+
+   local startt = ec.time()
+   local ret = self.node:iterativefindvalue(id, maxnodes, maxentriespernode)
+   local endt = ec.time()
+   ret.n = nil
+
+   for i, what in pairs(ret) do
+      if type(what) == "table" then
+   	 print(what.from.addr .. ":" .. what.from.port .. ": " .. tostring(what.retval))
+       local retval = what.retval
+   	 if type(retval) == "table" then
+	    self:prettyprint(retval)
+   	 end
+      else
+	 print(what.from.addr .. ":" .. what.from.port .. ": " .. tostring(what))
+      end
+   end
+
+   print(("in %4.2f ms"):format((endt - startt) * 1000))
+
+
+   return ret
+end
+
+
 function KademluaShell:main()
    local errorfree, errmsg = sregisterforevent("stdin")
    print("KademluaShell: register:", errorfree, errmsg)
