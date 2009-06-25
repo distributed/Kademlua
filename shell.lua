@@ -46,6 +46,8 @@ function KademluaShell:findnode(id)
       return print("! need an id: expected string: findnode <id>")
    end
 
+   local id = id
+
    if #id == 40 then
       local errorfree, convid = pcall(ec.fromhex, id)
       if not errorfree then 
