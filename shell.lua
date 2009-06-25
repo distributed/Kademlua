@@ -3,6 +3,26 @@ local print = print
 
 KademluaShell = {}
 
+function KademluaShell:prettyprint(what, level)
+   local level = level or 0
+
+   local spacing = "    "
+
+   if type(what) == "number" then
+      print(spacing:rep(level) .. tostring(what))
+   elseif type(what) == "string" then
+      print(spacing:rep(level) .. ("%q"):format(what))
+   elseif type(what) == "table" then
+      for name, value in pairs(what) do
+	 print(spacing:rep(level) .. tostring(name) .. " =>")
+	 self:prettyprint(value, level + 1)
+      end
+   else
+      print(spacing:rep(level) .. tostring(what))
+   end
+      
+end
+
 function KademluaShell:new(node)
    local o = {node=node
 	     }
