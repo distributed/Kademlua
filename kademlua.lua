@@ -175,7 +175,7 @@ function f1()
    for i=1,10 do syield() end
 
    -- sleep to wait for all nodes to come up
-   ssleep(3.0)
+   ssleep(0.3)
 
    node:bootstrap(bootstrap)
    --srun(node.bootstrap, node, bootstrap)
@@ -187,26 +187,27 @@ function f1()
 --   end
    ssleep(0.5)
 
+   print("KADEMLUA: adding to sha1('das')")
    node:iterativeadd(ec.sha1("das"), "stored by " .. tostring(port))
 
    -- find sha1("das") on (nil = default) nodes, maximum 6 entries
-   local ret = node:iterativefindvalue(ec.sha1("das"), nil, 6)
-   print("ITERATIVEFINDVALUE: done")
+   --local ret = node:iterativefindvalue(ec.sha1("das"), nil, 6)
+   --print("ITERATIVEFINDVALUE: done")
    --table.foreach(ret, function(index, what) if type(what) == "table" then print(what.from.addr .. ":" .. what.from.port .. ": " .. tostring(what.retval)) end end)
-   for i, what in pairs(ret) do
-      if type(what) == "table" then
-	 print(what.from.addr .. ":" .. what.from.port .. ": " .. tostring(what.retval))
-	 local retval = what.retval
-	 if type(retval) == "table" then
-	    table.foreach(retval, print)
-	 end
-      else
+   --for i, what in pairs(ret) do
+   --   if type(what) == "table" then
+   --	 print(what.from.addr .. ":" .. what.from.port .. ": " .. tostring(what.retval))
+   --    local retval = what.retval
+   --	 if type(retval) == "table" then
+   --	    table.foreach(retval, print)
+   --	 end
+   --   else
 	 --print(what.from.addr .. ":" .. what.from.port .. ": " .. tostring(what))
-	 print("what", i, what)
-      end
-   end
+   --    print("what", i, what)
+   --   end
+   --end
 
-   srun(printn, 3)
+   --srun(printn, 3)
 
    print("KADEMLUA: " .. tostring(node.callmanager.livelinessmanager:isstronglyalive({addr="127.0.0.1", port=8001})))
 
