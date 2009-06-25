@@ -66,6 +66,15 @@ function RoutingTable:newbucket()
 end
 
 
+function RoutingTable:numnodes()
+   local nodesum = 0
+   for i, bucket in ipairs(self.buckets) do
+      nodesum = nodesum + bucket.count
+   end
+   return nodesum
+end
+
+
 function RoutingTable.copynode(node)
    return {addr=node.addr,
 	   port=node.port,
