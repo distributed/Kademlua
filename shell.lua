@@ -228,7 +228,7 @@ function KademluaShell:main()
 					     totnumnodes,
 					     collectgarbage("count")))
       local event = swaitforevent("stdin")
-      if event.raw then
+      if event and event.raw then
 	 local chunk = loadstring(event.raw)
 	 if chunk then
 	    setfenv(chunk, env)
