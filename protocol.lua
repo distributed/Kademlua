@@ -83,6 +83,13 @@ function decodepacket(packet)
       packet.from.unique = packet.from.addr .. "|" .. packet.from.port .. "|" .. fromid
       packet.rpcid = rpcid
       packet.call = call
+
+      -- error packets don't have payload
+      if call == 130 or call == 131 then
+	 packet.decoded = true
+	 return
+      end
+
       if packet.call == 1 or packet.call == 129 then
 	 local msb = string.byte(raw:sub(31, 31))
 	 if msb == nil then
@@ -96,10 +103,13 @@ function decodepacket(packet)
 	 local len = (msb * 256) + lsb
 	 local encoded = raw:sub(33, 33 + len - 1)
 	 if #encoded ~= len then return end
-	 local payload = debencode(encoded)
-	 packet.payload = payload
-	 
-	 packet.decoded = true
+	 local ok, payload = pcall(debencode, encoded)
+	 if ok then
+	    packet.payload = payload
+	    packet.decoded = true
+	 else
+	    return
+	 end
       end
 
       return

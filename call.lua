@@ -37,7 +37,7 @@ function CallManager:timeoutf(rpcid, howsoon)
 
       self.livelinessmanager:timeout(runningt.packet.to, rpcid)
 
-      sresp(runningt.proc, {reply=false})
+      sresp(runningt.proc, {reply=false, cause="timeout"})
       --table.insert(self.scheduler.readyq, {proc=runningt.proc, args={false}})
    else
       -- do nothing ...
@@ -48,13 +48,20 @@ end
 function CallManager:incomingloop()
    while 1 do
       local packets = coroutine.yield("gp")
+      local validpacks = {}
+      local insert = table.insert
       for i, pack in ipairs(packets) do
 	 decodepacket(pack)
+	 if pack.decoded then
+	    insert(validpacks, pack)
+	 end
       end
       --print("INCOMING PACKETS")
       --table.foreach(packets, print)
       
-      srun(self.incoming, self, packets)
+      for i, validpack in ipairs(validpacks) do
+	 srun(self.incoming, self, {validpack})
+      end
       --self:incoming(packets)
    end
 end
@@ -82,8 +89,11 @@ function CallManager:incoming(packets)
 
 	 if self.running[rpcid] ~= nil then
 	    local callt = self.running[rpcid]
+	    local incall = packet.call
+	    if (incall == callt.packet.call + 128) or
+	       (incall == 130) or
+	       (incall == 131) then
 
-	    if packet.call == callt.packet.call + 128 then
 	       local to = callt.packet.to
 	       if (to.addr == from.addr) and (to.port == from.port) then
 		  if (to.id == nil) or (from.id == to.id) then
@@ -91,9 +101,20 @@ function CallManager:incoming(packets)
 		     print("CALL: incoming response, rpc id " .. ec.tohex(rpcid))
 		     self.livelinessmanager:incomm(packet.from, rpcid)
 		     self.running[rpcid] = nil
-		     sresp(callt.proc, {reply=true, 
-					payload=packet.payload,
-				        from=from})
+		     local reply = {payload=packet.payload,
+				    from=from,
+				    error=false}
+		     if packet.call == 130 then
+			reply.reply = false
+			reply.cause = "notfound"
+		     elseif packet.call == 131 then
+			reply.reply = false
+			reply.cause = "error"
+		     else
+			reply.reply = true
+		     end
+
+		     sresp(callt.proc, reply)
 		     --table.insert(self.scheduler.readyq, {proc=callt.proc, args={}})
 		  else
 		     print ("CALL: callers ID does not match")

@@ -47,7 +47,7 @@ function KademluaNode:sendRPC(whom, name, ...)
    else
       if not rep.reply == false then error("reply field not set") end
       -- so there is something to unpack
-      rep.payload = {}
+      rep.payload = {rep.cause}
    end
 
    --print("reply from callmanager")
@@ -66,17 +66,28 @@ function KademluaNode:incomingRPC(packet)
    --table.foreach(payload.args, print)
    --print("<======================")
 
-   local func = self.rpcdispatch[payload.name]
-   -- unknown RPC, TODO: handle this in a better way
-   if func == nil then return {} end
-   local ret = {func(self, packet.from, unpack(payload.args))}
-   
+   -- skeleton
    local retpacket = {to=packet.from,
 		      fromid=self.id,
-		      rpcid=packet.rpcid,
-		      call=129,
-		      payload=ret
-		   }
+		      rpcid=packet.rpcid}
+
+   local func = self.rpcdispatch[payload.name]
+   -- unknown RPC, TODO: handle this in a better way
+   if func == nil then 
+      -- RPC function not found
+      retpacket.call = 130
+      return {retpacket}
+   end
+   local ret = {scall(func, self, packet.from, unpack(payload.args))}
+   local errorfree = table.remove(ret, 1)
+   if errorfree then
+      retpacket.call=129
+      retpacket.payload=ret
+   else
+      -- error executing the RPC function
+      retpacket.call = 131
+      return {retpacket}
+   end
    --table.foreach(retpacket, print)
    --print("ret")
    return {retpacket}
