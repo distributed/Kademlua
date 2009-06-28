@@ -404,16 +404,23 @@ function KademluaNode:iterativefind(id, rpc, extra, bootstrap)
    local done = false
    local numrunning = alpha
    local order = function(a,b) 
-		    if a == b then 
+		    print("a, b: ", a,b)
+		    --if b == nil then
+		    --   print("ORDER: WTF?")
+		    --   return false
+		    --end
+		    if a.distance == b.distance then 
 		       return false
 		    end
-		    -- kind of DoS protection
-		    if a.distance == b.distance then return true end
+
+
+		    -- TODO: when does order get (table, nil) as arguments?
 		    --print(a, b)
 		    --print(ec.tohex(a.distance), ec.tohex(b.distance))
 		    --print(a.addr .. ":" .. a.port .. " / " .. b.addr .. ":" .. b.port)
 		    return not RoutingTable.strcomp(a.distance, b.distance) 
 		 end
+
 
    table.sort(inorder, order)
 
