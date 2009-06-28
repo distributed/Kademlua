@@ -209,7 +209,7 @@ function f1()
 
    --srun(printn, 3)
 
-   print("KADEMLUA: " .. tostring(node.callmanager.livelinessmanager:isstronglyalive({addr="127.0.0.1", port=8001})))
+   --print("KADEMLUA: " .. tostring(node.callmanager.livelinessmanager:isstronglyalive({addr="127.0.0.1", port=8001})))
 
 
    ssleep(8.0)
