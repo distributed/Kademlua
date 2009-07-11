@@ -358,7 +358,7 @@ end
 
 
 function KademluaNode:iterativefindnode(id, bootstrap)
-   return self:iterativefind(id, "findnode", {numret=65535}, bootstrap)
+   return self:iterativefind(id, "findnode", {numret=65535, tenacity=6}, bootstrap)
 end
 
 
@@ -368,9 +368,11 @@ function KademluaNode:iterativefind(id, rpc, extra, bootstrap)
    local rpc = rpc or "findnode"
    local numret = 3
    local args = {}
+   local tenacity = 20
    if extra and type(extra) == "table" then
       numret = extra.numret or numret
       args = extra.args or args
+      tenacity = extra.tenacity or tenacity
    end
 
    local findnode = (rpc == "findnode")
@@ -533,8 +535,14 @@ function KademluaNode:iterativefind(id, rpc, extra, bootstrap)
       end
 
       if inserted == 0 then
-	 clerkreturn()
-	 return
+	 if tenacity <= 0 then
+	    -- no more tolerance towards nonconverging node information
+	    clerkreturn()
+	    return
+	 else
+	    tenacity = tenacity - 1
+	    return clerk()
+	 end
       end
 
       sort(inorder, order)
