@@ -10,7 +10,8 @@ function KademluaNode:new(id)
 	      rpcdispatch = {["ping"] = self.inping,
 			     ["findnode"] = self.infindnode,
 			     ["store"] = self.instore,
-			     ["findvalue"] = self.infindvalue
+			     ["findvalue"] = self.infindvalue,
+			     ["getsocket"] = self.ingetsocket
 			    },
 	      datastore = DataStore:new()
 	   }
@@ -300,6 +301,16 @@ end
 
 function KademluaNode:findvalue(who, id, howmany)
    return self:sendRPC(who, "findvalue", id, howmany)
+end
+
+
+function KademluaNode:ingetsocket(from)
+   return {addr=from.addr, port=from.port}
+end
+
+
+function KademluaNode:getsocket(who)
+   return self:sendRPC(who, "getsocket")
 end
 
 
