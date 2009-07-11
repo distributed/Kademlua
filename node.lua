@@ -406,7 +406,7 @@ function KademluaNode:iterativefind(id, rpc, extra, bootstrap)
    local done = false
    local numrunning = alpha
    local order = function(a,b) 
-		    print("a, b: ", a,b)
+		    --print("a, b: ", a,b)
 		    --if b == nil then
 		    --   print("ORDER: WTF?")
 		    --   return false
