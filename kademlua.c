@@ -396,7 +396,7 @@ int tohex(lua_State *L) {
 
   int nargs = lua_gettop(L);
   if (nargs != 1) {
-    lua_pushstring(L, "sha1() needs exactly one argument");
+    lua_pushstring(L, "tohex() needs exactly one argument");
     lua_error(L);
   }
   
@@ -441,7 +441,7 @@ int fromhex(lua_State *L) {
 
   int nargs = lua_gettop(L);
   if (nargs != 1) {
-    lua_pushstring(L, "sha1() needs exactly one argument");
+    lua_pushstring(L, "fromhex() needs exactly one argument");
     lua_error(L);
   }
   
