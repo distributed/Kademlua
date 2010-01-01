@@ -469,6 +469,11 @@ end
 function Scheduler:postevent(event)
    local type = event.type or error("event has no type", 2)
    local eventhandler = self.eventhandlers[type]
+   if not eventhandler then
+      print("WARNING: no event handler set for event type " .. tostring(type))
+      return
+   end
+
    if eventhandler.waiting then
       self:makeready(eventhandler.proc, {event})
    else
