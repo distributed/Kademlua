@@ -8,13 +8,15 @@ local maxage = 120
 
 DataStore = {}
 
-function DataStore:new(id)
+function DataStore:new(id, _bucketduration, _maxage)
    local o = {
       byhash = {},
       byowner = {},
       byownerandkey = {},
       timebuckets = {},
-      stop = false
+      stop = false,
+      bucketduration = _bucketduration or bucketduration,
+      maxage = _maxage or maxage
    }
 
    srun(DataStore.agecheck, o)
@@ -43,7 +45,9 @@ function DataStore:agecheck()
    local time = ec.time
    local floor = math.floor
    local timebuckets = self.timebuckets
-   local maxage = maxage
+   local maxage = self.maxage
+
+   local bucketduration = self.bucketduration
 
    while not self.stop do
       ssleep(bucketduration / 2)
@@ -81,6 +85,8 @@ end
 -- insert a new entry (owner, key, value) if it *does not exist* yet.
 function DataStore:addentry(owner, key, value)
    local now = ec.time()
+   local bucketduration = self.bucketduration
+   
 
    local unique = owner.unique
    if not unique then
@@ -132,6 +138,7 @@ function DataStore:updateentry(entry, value)
    entry.value = value
 
    local now = ec.time()
+   local bucketduration = bucketduration
 
    local oldtimebucketno = entry.timebucketno
    local newtimebucketno = math.floor(now / bucketduration)
