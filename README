@@ -1,0 +1,86 @@
+Kademlua is a Kademlia style distributed hash table written in Lua
+with some support code written in C.
+
+The code works as in "provides a DHT to store and retrieve values" but
+it is very untidy. It's actually my first big project in Lua and I
+guess it shows a little. The code is not really organized into
+modules...
+
+
+Overview:
+=========
+
+Kademlua defines its own RPC format which uses BEncoding (like
+BitTorrent) and closely resembles the one used by the Entangled DHT.
+
+Kademlua is easily integrated into other applications. Kademlua
+completely runs in coroutines and is, therefore, re-entrant. Kademlua
+code is mostly written in Lua, with the notable exception of the "ec"
+library provided by the kademlua.c file. With the exception of the
+getevent() function everything in the "ec" library could also be done
+in Lua. getevent() handles reading from and to the network via a UDP
+socket. 
+
+I believe Kademlua to be quite fast and acceptably economical* with
+memory, it needs few hundred kilobytes when it has made contacts with
+around 100 nodes, even though there still are a number of pretty low
+hanging fruit, like the queue of the coroutine scheduler or the whole
+LivelinessManager thing.
+
+
+
+* In contrast with today's RAM sizes in personal computers.
+
+If you have questions, don't hesitate to contact me.
+
+
+
+Dependencies:
+=============
+
+* Lua 5.1
+
+* openssl's libcrypto (only for SHA-1 implementation, could be
+  implemented directly)
+
+
+
+Usage:
+======
+
+1. Compile the C code:
+gcc -std=c99 -llua -lcrypto -o kademlua kademlua.c kademluamain.c
+
+2. Start control node:
+./kademlua 8001
+
+3. In another shell: Start a network of 100 Kademlua nodes:
+./start.sh
+
+(Maybe you will have to create a directory called log)
+
+Step 3 may open too much files for the taste of your OS. In this case
+either reise the maximum number of open files or decrease the amount
+of started nodes in start.sh
+
+The control node created in step 2 provides command shell which
+accepts Lua programs, e.g.:
+
+add(sha1("key"), "value")
+
+findvalue(sha1("key"))
+
+The command prompt looks like 
+
+20~40 |  496 >
+
+which means that our node has 20 other nodes in its routing table,
+which leads to an estimated 40 nodes in the whole network. Our node
+consumes 496 kbyte of Lua memory.
+
+
+
+Platforms:
+==========
+
+Kademlua has been successfully run on Mac OS X 10.5.x/i386, Linux/amd64 and Linux/mipsel (on an OpenWRT router :D).
