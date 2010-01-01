@@ -159,6 +159,20 @@ function f1()
    -- 	 table.foreach(vls, print)
    --   end
    --end
+   local enableprofiling = false
+   
+   if enableprofiling then
+      local profile = pcall(function() return require("profiler") end)
+      if profile then
+	 profiler.start("lprof_" .. tostring(port))
+      end
+   end
+
+   local function sleeplong()
+      ssleep(2.3)
+   end
+   srun(sleeplong)
+   ssleep(2.3)
 
    local node = KademluaNode:new(id)
    srun(node.run, node)
@@ -187,9 +201,17 @@ function f1()
 --   end
    ssleep(0.5)
 
+   local errorfree, from, mysock = node:getsocket({addr="192.168.1.5", port=8001})
+   if errorfree then
+      print("our socket is: " .. mysock.addr .. ":" .. tostring(mysock.port))
+   end
+
    print("KADEMLUA: adding to sha1('das')")
    node:iterativeadd(ec.sha1("das"), "stored by " .. tostring(port))
 
+   if profile then
+      profiler.stop()
+   end
    -- find sha1("das") on (nil = default) nodes, maximum 6 entries
    --local ret = node:iterativefindvalue(ec.sha1("das"), nil, 6)
    --print("ITERATIVEFINDVALUE: done")
