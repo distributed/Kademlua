@@ -48,8 +48,10 @@ Dependencies:
 Usage:
 ======
 
+0. Edit the Makefile to suit your Lua/OpenSSL installation.
+
 1. Compile the C code:
-gcc -std=c99 -llua -lcrypto -o kademlua kademlua.c kademluamain.c
+make
 
 2. Start control node:
 ./kademlua 8001
