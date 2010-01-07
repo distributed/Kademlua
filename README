@@ -51,18 +51,20 @@ Usage:
 0. Edit the Makefile to suit your Lua/OpenSSL installation.
 
 1. Compile the C code:
-make
+$ make
 
 2. Start control node:
-./kademlua 8001
+$ ./kademlua 8001
+
+2.5. create a log directory for step 3:
+$ mkdir log
 
 3. In another shell: Start a network of 100 Kademlua nodes:
-./start.sh
+$ ./start.sh
 
-(Maybe you will have to create a directory called log)
 
 Step 3 may open too much files for the taste of your OS. In this case
-either reise the maximum number of open files or decrease the amount
+either raise the maximum number of open files or decrease the amount
 of started nodes in start.sh
 
 The control node created in step 2 provides command shell which
